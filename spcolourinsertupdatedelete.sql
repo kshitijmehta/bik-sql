@@ -11,7 +11,7 @@ LANGUAGE 'plpgsql'
 AS $BODY$
 
 BEGIN
-	IF _ser =1 THEN
+	IF _ser =1 THEN --Insert Block
 		INSERT INTO ref_colour 
 		VALUES(_code, _value);
 	
