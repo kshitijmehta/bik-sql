@@ -1,0 +1,2 @@
+ALTER TABLE product_category
+ADD COLUMN prod_category_datetill TIMESTAMP DEFAULT NULL
