@@ -5,7 +5,7 @@ Run the following command of adding a column before executing spProdCategoryInse
 ALTER TABLE product_category
 ADD COLUMN prod_category_datetill TIMESTAMP DEFAULT NULL
 
---17 Jul 20----
+-------------------------17 Jul 20-----------------------
 /* Create Images table---- Begin*/
 CREATE TABLE product_image (
 	
@@ -15,3 +15,11 @@ CREATE TABLE product_image (
 	prod_img_path TEXT
 );
 /* Create Images table---- End*/
+
+-------------------18 Jul 20-----------------------------
+
+CREATE TABLE coupon(
+	coupon_id INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	coupon_code VARCHAR(20) NOT NULL,
+	coupon_value VARCHAR(20) NOT NULL
+);
