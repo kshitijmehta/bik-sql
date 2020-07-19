@@ -46,7 +46,7 @@ CREATE TABLE public.users
     user_gender character(7) COLLATE pg_catalog."default",
     user_dob date,
     user_emailaddr character varying(50) COLLATE pg_catalog."default" NOT NULL,
-    user_mobileno character varying(10) COLLATE pg_catalog."default" NOT NULL,
+    user_mobileno character varying(16) COLLATE pg_catalog."default" NOT NULL,
     user_password text COLLATE pg_catalog."default" NOT NULL,
     user_typecode character(1) COLLATE pg_catalog."default",
     user_verified boolean,
@@ -65,7 +65,6 @@ TABLESPACE pg_default;
 
 ALTER TABLE public.users
     OWNER to postgres;
-
 
 
 -- PROCEDURE: public.spuserinsertupdate(integer, character varying, character varying, text, character, character varying, character varying, character, date, boolean, character varying)
