@@ -23,3 +23,8 @@ CREATE TABLE coupon(
 	coupon_code VARCHAR(20) NOT NULL,
 	coupon_value VARCHAR(20) NOT NULL
 );
+
+---------------------19 Jul 20---------------
+
+ALTER TABLE coupon
+ADD COLUMN coupon_datetill TIMESTAMP DEFAULT NULL
