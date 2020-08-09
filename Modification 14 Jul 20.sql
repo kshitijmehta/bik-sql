@@ -54,3 +54,24 @@ TABLESPACE pg_default;
 ALTER TABLE public.ref_size
     OWNER to postgres;
 -----Create table ref_size---------------End
+
+------------------------09 Aug 20------------------------------
+
+-----Create Table ref_colour-----begin
+
+-- DROP TABLE public.ref_colour;
+
+CREATE TABLE public.ref_colour
+(
+    colour_code character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    colour_value character varying(50) COLLATE pg_catalog."default" NOT NULL,
+    colour_id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    colour_datetill timestamp without time zone,
+    CONSTRAINT ref_colour_pkey PRIMARY KEY (colour_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE public.ref_colour
+    OWNER to postgres;
+-----Create Table ref_colout-----end---
