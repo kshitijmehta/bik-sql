@@ -75,3 +75,20 @@ TABLESPACE pg_default;
 ALTER TABLE public.ref_colour
     OWNER to postgres;
 -----Create Table ref_colout-----end---
+
+-----------------04 Oct 20------------------
+
+---Columns added in product table and renamed in product_subcategory table---------
+alter table product
+add column prod_name varchar(50);
+
+alter table product
+add column prod_desc text;
+
+alter table product_sub_category
+rename prod_name to prod_subcateg_name;
+
+
+alter table product_sub_category
+rename prod_desc to prod_subcateg_desc;
+
