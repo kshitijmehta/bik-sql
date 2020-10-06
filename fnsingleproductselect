@@ -1,0 +1,38 @@
+-- FUNCTION: public.fnsingleproductselect(integer)
+
+-- DROP FUNCTION public.fnsingleproductselect(integer);
+
+CREATE OR REPLACE FUNCTION public.fnsingleproductselect(
+	_prod_id integer)
+    RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc character varying, inrprice numeric, usdprice numeric, colour character varying, size character varying, qty integer, subcategoryid integer, sizeid integer, colourid integer, imagename text, imagepath text) 
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+    ROWS 1000
+    
+AS $BODY$
+	
+	BEGIN
+		
+		RETURN QUERY
+		SELECT b.prod_id,c.prod_category, b.prod_name,b.prod_desc, b.prod_inr_price,
+		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
+		b.prod_size, b.prod_colour, string_agg(f.prod_img_name, ', '),string_agg(f.prod_img_path, ', ')
+		FROM product_sub_category a
+		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
+		LEFT JOIN ref_size e ON e.size_id = b.prod_size
+		LEFT JOIN product_image f ON f.prod_id = b.prod_id
+		WHERE b.prod_id = _prod_id AND b.prod_datetill is null
+		GROUP BY  b.prod_id,c.prod_category, b.prod_name,a.prod_desc, b.prod_inr_price,
+		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
+		b.prod_size, b.prod_colour;
+	
+	END
+
+$BODY$;
+
+ALTER FUNCTION public.fnsingleproductselect(integer)
+    OWNER TO postgres;
