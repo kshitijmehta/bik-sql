@@ -1,0 +1,24 @@
+/*Stored Procedure to insert product details like a product with different sizes, colors and qty. 
+  Values of all 3 will be brought into a tuple. If multiple products are to be added then comma seperated tuples will be passed.
+  The tuple values should be (prod_id,prod_inr_price,prod_usd_price,prod_colour,prod_size,prod_qty)
+*/
+
+CREATE OR REPLACE PROCEDURE public.spProductDetails_add (
+	  _prod_details TEXT
+)
+LANGUAGE 'plpgsql'
+AS $BODY$
+	DECLARE 
+	_sql TEXT := 'INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_colour,prod_size,prod_qty) VALUES';
+BEGIN
+	if _prod_details is null then
+		RAISE EXCEPTION 'Product details not added';
+	END IF;
+	_sql := _sql || _prod_details;
+	
+	EXECUTE _sql 
+	USING $1;
+	
+
+END
+$BODY$;
