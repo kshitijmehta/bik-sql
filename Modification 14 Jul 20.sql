@@ -92,3 +92,29 @@ rename prod_name to prod_subcateg_name;
 alter table product_sub_category
 rename prod_desc to prod_subcateg_desc;
 
+------------------11 Oct 20-------------------------
+--- Restructured Product table and created product_details table
+create table product(
+	
+	  prod_id INTEGER PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY
+	, prod_subcateg_id INTEGER 
+	, prod_name VARCHAR(50)
+	, prod_desc TEXT
+	, prod_datetill TIMESTAMP
+	
+	,CONSTRAINT fk_prod_subcateg FOREIGN KEY(prod_subcateg_id) REFERENCES product_sub_category(prod_subcateg_id)
+)
+
+create table product_details(
+	  pd_id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY
+	, prod_id INTEGER REFERENCES product(prod_id)
+	, prod_inr_price numeric
+	, prod_usd_price numeric
+	, prod_colour INTEGER REFERENCES ref_colour(colour_id)
+	, prod_size INTEGER REFERENCES ref_size(size_id)
+	, prod_qty integer
+)
+
+
+
+
