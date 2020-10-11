@@ -1,7 +1,8 @@
+--This function is for Admin to view all the products based on product category  along with their quantity available
+
 CREATE OR REPLACE FUNCTION fnAdminProductSelect ()
 	RETURNS TABLE (prodID int, prodCategory VARCHAR(50), prodName VARCHAR(50),prodDesc text,
-				   inrPrice numeric, usdPrice numeric,
-				   colour varchar(50), size varchar(50), qty int)
+				  qty int)
 
 AS
 				   
@@ -18,11 +19,11 @@ $func$
 		inner join product c on b.prod_subcateg_id = c.prod_subcateg_id
 		)
 		select prod_id, prod_category, prod_name
-		, prod_desc , pd.prod_inr_price, pd.prod_usd_price
-		, rc.colour_value , rs.size_value , pd.prod_qty  from product_details pd 
-		inner join cte_productgetdetails using (prod_id)
+		, prod_desc , sum(pd.prod_qty) as Qty  from product_details pd 
+		inner join cte_productgetdetails ct using (prod_id)
 		inner join ref_colour rc on pd.prod_colour = rc.colour_id
-		inner join ref_size rs on pd.prod_size = rs.size_id;
+		inner join ref_size rs on pd.prod_size = rs.size_id
+		group by prod_id,prod_category, prod_name, prod_desc;
 		
 		
 		
@@ -38,4 +39,3 @@ $func$
 	END
 
 $func$ LANGUAGE plpgsql;
-
