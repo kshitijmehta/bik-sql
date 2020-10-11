@@ -9,14 +9,31 @@ $func$
 	
 	BEGIN
 		
-		RETURN QUERY
-		SELECT b.prod_id,c.prod_category, a.prod_name,a.prod_desc, b.prod_inr_price,
-		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty FROM product_sub_category a
-		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
-		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
-		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
-		LEFT JOIN ref_size e ON e.size_id = b.prod_size
-		ORDER BY b.prod_id;
+		RETURN QUERY 
+		
+		with cte_productgetdetails as (
+		select a.prod_category, b.prod_subcateg_id
+		, c.prod_id, c.prod_name, c.prod_desc from 
+		product_sub_category b inner join  product_category a  on  b.prod_category_id =a.prod_category_id 
+		inner join product c on b.prod_subcateg_id = c.prod_subcateg_id
+		)
+		select prod_id, prod_category, prod_name
+		, prod_desc , pd.prod_inr_price, pd.prod_usd_price
+		, rc.colour_value , rs.size_value , pd.prod_qty  from product_details pd 
+		inner join cte_productgetdetails using (prod_id)
+		inner join ref_colour rc on pd.prod_colour = rc.colour_id
+		inner join ref_size rs on pd.prod_size = rs.size_id;
+		
+		
+		
+-- 		RETURN QUERY
+-- 		SELECT b.prod_id,c.prod_category, a.prod_name,a.prod_desc, b.prod_inr_price,
+-- 		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty FROM product_sub_category a
+-- 		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+-- 		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+-- 		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
+-- 		LEFT JOIN ref_size e ON e.size_id = b.prod_size
+-- 		ORDER BY b.prod_id;
 	
 	END
 
