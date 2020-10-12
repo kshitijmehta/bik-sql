@@ -1,0 +1,16 @@
+/* SP to delete the Product Details */
+
+CREATE OR REPLACE PROCEDURE spProductDetails_delete (
+	_pd_id INTEGER)
+
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+	
+	DELETE 
+	FROM public.product_details
+	WHERE pd_id = _pd_id;
+	
+END
+$BODY$;
+
