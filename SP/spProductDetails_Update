@@ -1,0 +1,23 @@
+/*Procedure to update product detail values */
+
+CREATE OR REPLACE PROCEDURE spProductDetails_Update (
+	_pd_id INTEGER
+	, _inrprice NUMERIC
+	, _usdprice NUMERIC
+	, _colour INTEGER
+	, _size INTEGER
+	, _qty INTEGER
+)
+
+LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+	UPDATE product_details
+		SET (prod_inr_price, prod_usd_price, prod_colour, prod_size, prod_qty)
+		   =(_inrprice	   , _usdprice		, _colour	, _size		, _qty)
+	WHERE pd_id = _pd_id;
+END
+$BODY$;
+
+
+
