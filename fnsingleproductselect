@@ -4,7 +4,9 @@
 
 CREATE OR REPLACE FUNCTION public.fnsingleproductselect(
 	_prod_id integer)
-    RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc character varying, inrprice numeric, usdprice numeric, colour character varying, size character varying, qty integer, subcategoryid integer, sizeid integer, colourid integer, imagename text, imagepath text) 
+    RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc text
+				  , inrprice character varying, usdprice character varying, colour character varying, size character varying, qty character varying
+				  , subcategoryid integer,  imagename character varying, imagepath character varying) 
     LANGUAGE 'plpgsql'
 
     COST 100
@@ -16,19 +18,45 @@ AS $BODY$
 	BEGIN
 		
 		RETURN QUERY
-		SELECT b.prod_id,c.prod_category, b.prod_name,b.prod_desc, b.prod_inr_price,
-		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
-		b.prod_size, b.prod_colour, string_agg(f.prod_img_name, ', '),string_agg(f.prod_img_path, ', ')
-		FROM product_sub_category a
-		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
-		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
-		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
-		LEFT JOIN ref_size e ON e.size_id = b.prod_size
-		LEFT JOIN product_image f ON f.prod_id = b.prod_id
-		WHERE b.prod_id = _prod_id AND b.prod_datetill is null
-		GROUP BY  b.prod_id,c.prod_category, b.prod_name,a.prod_desc, b.prod_inr_price,
-		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
-		b.prod_size, b.prod_colour;
+		with cte_productgetdetails as (
+		select a.prod_category, b.prod_subcateg_id
+		, c.prod_id, c.prod_name, c.prod_desc from 
+		product_sub_category b 
+		inner join product_category a  on  b.prod_category_id =a.prod_category_id 
+		inner join product c on b.prod_subcateg_id = c.prod_subcateg_id
+		where prod_id = _prod_id
+		)
+		select pd.prod_id
+		,ct.prod_category, ct.prod_name, ct.prod_desc 
+		, string_agg(pd.prod_inr_price::CHARACTER VARYING,',' order by pd.pd_id) INR_Price
+		, string_agg(pd.prod_usd_price::CHARACTER VARYING,',' order by pd.pd_id) USD_Price
+		, string_agg(rc.colour_value,',' order by pd.pd_id) Colour
+		, string_agg(rs.size_code,',' order by pd.pd_id) Size
+		, string_agg(pd.prod_qty::CHARACTER VARYING,',' order by pd.pd_id) Qty
+		, ct.prod_subcateg_id
+		, string_agg(pi.prod_img_name,',' order by pd.pd_id) Images
+		, string_agg(pi.prod_img_path,',' order by pd.pd_id) ImagePath
+		from product_details pd
+		inner join cte_productgetdetails ct using (prod_id)
+		inner join ref_colour rc on pd.prod_colour = rc.colour_id
+		inner join ref_size rs on pd.prod_size = rs.size_id
+		inner join product_image pi using (prod_id)
+		where pd.prod_id = _prod_id
+		group by pd.prod_id, ct.prod_category, ct.prod_name, ct.prod_desc, ct.prod_subcateg_id;
+		
+-- 		SELECT b.prod_id,c.prod_category, b.prod_name,b.prod_desc, b.prod_inr_price,
+-- 		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
+-- 		b.prod_size, b.prod_colour, string_agg(f.prod_img_name, ', '),string_agg(f.prod_img_path, ', ')
+-- 		FROM product_sub_category a
+-- 		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+-- 		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+-- 		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
+-- 		LEFT JOIN ref_size e ON e.size_id = b.prod_size
+-- 		LEFT JOIN product_image f ON f.prod_id = b.prod_id
+-- 		WHERE b.prod_id = _prod_id AND b.prod_datetill is null
+-- 		GROUP BY  b.prod_id,c.prod_category, b.prod_name,a.prod_desc, b.prod_inr_price,
+-- 		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
+-- 		b.prod_size, b.prod_colour;
 	
 	END
 
@@ -36,3 +64,5 @@ $BODY$;
 
 ALTER FUNCTION public.fnsingleproductselect(integer)
     OWNER TO postgres;
+	
+
