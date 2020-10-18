@@ -5,14 +5,16 @@
 --select * from fnproductlistselect (_size:='(1)',_colour:='(1,2)',_prodcategid := 4)
 --select * from fnproductlistselect (_prodcategid := 4)
 --select * from fnproductlistselect ()
+--select * from fnproductlistselect (_subcategid  := '(2,3)') 
 
 CREATE OR REPLACE FUNCTION public.fnproductlistselect(
 	_colour text DEFAULT NULL::text,
 	_size text DEFAULT NULL::text,
 	_price text DEFAULT NULL::text
-   , _prodcategid INTEGER DEFAULT NULL)
+   , _prodcategid INTEGER DEFAULT NULL
+   , _subcategid text default null)
    
-    RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc text
+    RETURNS TABLE(prodid integer, prodcategory character varying, prodsubcategory character varying, prodname character varying, proddesc text
 				  , inrprice numeric, usdprice numeric, colour character varying, size character varying, qty integer
 				  , prodimgpath TEXT) 
     LANGUAGE 'plpgsql'
@@ -25,7 +27,7 @@ AS $BODY$
 	
 	DECLARE
 	
-	_sql TEXT := 'SELECT b.prod_id,c.prod_category, b.prod_name,b.prod_desc, pd.prod_inr_price,
+	_sql TEXT := 'SELECT b.prod_id, c.prod_category,a.prod_subcateg_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
 		pd.prod_usd_price, d.colour_value, e.size_value,pd.prod_qty,f.prod_img_path FROM product_sub_category a
 		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
 		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
@@ -46,6 +48,7 @@ AS $BODY$
 						   ,  CASE WHEN _colour IS NOT NULL THEN 'd.colour_id in ' ||_colour||' ' END
 						   ,  CASE WHEN _size IS NOT NULL THEN 'e.size_id in ' || _size||' ' END
 						   ,  CASE WHEN _prodcategid IS NOT NULL THEN 'c.prod_category_id ='|| _prodcategid  END
+							, CASE WHEN _subcategid IS NOT NULL THEN 'a.prod_subcateg_id in '||_subcategid||' ' END
 						   ,  CASE WHEN _price IS NOT NULL THEN _price END||' ');
 		
 		 IF _where <> '' THEN
