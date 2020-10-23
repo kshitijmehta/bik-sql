@@ -296,6 +296,34 @@ BEGIN
 END;
 $BODY$;
 
+---------------------------------Function to get cart of a user------------------------------
+CREATE OR REPLACE FUNCTION fn_get_cart (_userid INTEGER,
+					OUT status SMALLINT, OUT js JSON)
+
+LANGUAGE 'plpgsql'
+
+AS $BODY$
+	BEGIN
+		js:= row_to_json(r) from (
+									select ps.prod_subcateg_name, p.prod_name
+											, a.orderdetail_price, a.orderdetail_qty
+											, a.orderdetail_linetotal, pi.prod_img_path from store.orderdetails a
+									inner join product p on a.prod_id=p.prod_id
+									inner join product_sub_category ps on p.prod_subcateg_id = ps.prod_subcateg_id
+									inner join product_image pi on  a.prod_id = pi.prod_id
+									inner join store.order oe on a.order_id = oe.order_id
+									where oe.user_id = _userid
+									and prod_img_path = (select prod_img_path from product_image where prod_id= a.prod_id LIMIT 1)
+									
+									) r;
+		status := 200;
+		
+		
+		
+
+	END;
+
+$BODY$;
 
 
 
