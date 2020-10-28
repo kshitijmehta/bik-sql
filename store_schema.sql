@@ -410,4 +410,55 @@ $BODY$;
 
 ALTER FUNCTION store.order_item_add(integer, integer, integer, integer)
     OWNER TO postgres;
+ 
+----------------------------------------------------------Kshitij
+-- Table: store.orderdetails
+
+-- DROP TABLE store.orderdetails;
+
+CREATE TABLE store.orderdetails
+(
+    orderdetail_id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    order_id integer,
+    prod_detail_id integer,
+    orderdetail_qty integer,
+    orderdetail_price numeric,
+    orderdetail_price_id integer,
+    orderdetail_linetotal numeric GENERATED ALWAYS AS (((orderdetail_qty)::numeric * orderdetail_price)) STORED,
+    shipment_id integer,
+    CONSTRAINT orderdetails_pkey PRIMARY KEY (orderdetail_id),
+    CONSTRAINT orderdetails_order_id_fkey FOREIGN KEY (order_id)
+        REFERENCES store."order" (order_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT orderdetails_prod_detail_id_fkey FOREIGN KEY (prod_detail_id)
+        REFERENCES public.product_details (pd_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT orderdetails_shipment_id_fkey FOREIGN KEY (shipment_id)
+        REFERENCES store.shipments (shipment_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE store.orderdetails
+    OWNER to postgres;
+-- Index: fki_orderdetails_prod_detail_id_fkey
+
+-- DROP INDEX store.fki_orderdetails_prod_detail_id_fkey;
+
+CREATE INDEX fki_orderdetails_prod_detail_id_fkey
+    ON store.orderdetails USING btree
+    (prod_detail_id ASC NULLS LAST)
+    TABLESPACE pg_default;
+-- Index: orderdetails_order_id_idx
+
+-- DROP INDEX store.orderdetails_order_id_idx;
+
+CREATE INDEX orderdetails_order_id_idx
+    ON store.orderdetails USING btree
+    (order_id ASC NULLS LAST)
+    TABLESPACE pg_default;
 
