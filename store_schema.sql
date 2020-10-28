@@ -329,3 +329,85 @@ $BODY$;
 
 
 COMMIT;
+
+------------------------Kshitij
+-- FUNCTION: store.order_item_add(integer, integer, integer, integer)
+
+-- DROP FUNCTION store.order_item_add(integer, integer, integer, integer);
+
+CREATE OR REPLACE FUNCTION store.order_item_add(
+	_uid integer,
+	_prid integer,
+	_qty integer,
+	_pdid integer,
+	OUT status smallint,
+	OUT js json)
+    RETURNS record
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+    
+AS $BODY$
+	DECLARE
+		cart_id INTEGER;
+		line_id INTEGER;
+		prod_price NUMERIC;
+		client_price NUMERIC;
+		price_inr NUMERIC;
+		price_usd NUMERIC;
+		e6 text; e7 text; e8 text; e9 text;
+	BEGIN
+		-- creating cartid
+		SELECT id into cart_id FROM store.fn_cart_get_id(_uid);
+		IF cart_id is null THEN
+			SELECT id into cart_id FROM store.cart_new_id(_uid);
+		END IF;
+		-- selecting current price
+		SELECT prod_inr_price, prod_usd_price into price_inr,price_usd
+		FROM product_details where pd_id = _pdid;
+		-- checking for product already in cart
+		SELECT orderdetail_id into line_id 
+		FROM store.orderdetails WHERE order_id =cart_id
+		AND prod_detail_id = _pdid;
+		-- setting price INR or USD based on clien
+		IF _prid = 1 THEN
+			client_price = price_inr;
+		ELSE
+			client_price = price_usd;
+		END IF;
+		IF line_id IS NULL THEN
+			INSERT INTO store.orderdetails (order_id, prod_detail_id, orderdetail_qty, orderdetail_price, orderdetail_price_id)
+						VALUES			    (cart_id, _pdid	 , _qty			  , client_price			 , _prid)
+						RETURNING orderdetail_id into line_id;
+		ELSE
+			--This will check if the existing price in orderdetails is same or not. If not it will update the price as well.
+			SELECT orderdetail_price into prod_price
+			FROM store.orderdetails WHERE orderdetail_id = line_id;
+			IF prod_price = client_price THEN
+				UPDATE store.orderdetails 
+				SET orderdetail_qty = orderdetail_qty + _qty
+				WHERE orderdetail_id = line_id;
+			ELSE
+				RAISE INFO 'Price of one of the items in your cart has been updated';
+				UPDATE store.orderdetails 
+				SET  orderdetail_qty = orderdetail_qty + _qty
+					,orderdetail_price = client_price
+				WHERE orderdetail_id = line_id;
+			END IF;
+		END IF;
+		status := 200;
+		js := row_to_json(r.*) from store.orderdetails r where orderdetail_id = line_id;
+	
+	EXCEPTION 
+		
+		when others then get stacked diagnostics e6=returned_sqlstate, e7=message_text, e8=pg_exception_detail, e9=pg_exception_context;
+		js := json_build_object('code',e6,'message',e7,'detail',e8,'context',e9);
+		status := 500;
+				
+	END;
+$BODY$;
+
+ALTER FUNCTION store.order_item_add(integer, integer, integer, integer)
+    OWNER TO postgres;
+
