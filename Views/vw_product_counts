@@ -1,0 +1,24 @@
+create view vw_product_counts
+       ( 
+			 prod_subcategory_id
+		   , prod_subcategroy_name
+		   , colour_id
+		   , colour_name
+		   , size_id
+		   , size_name		
+       	   , prod_count
+       ) as
+	select 
+	p.prod_subcateg_id
+	, b.prod_subcateg_name
+	, a.prod_colour
+	, rc.colour_value ,a.prod_size , rs.size_value
+	, count(*) from product_details a
+	inner join product p on a.prod_id = p.prod_id
+	inner join ref_colour rc on a.prod_colour = rc.colour_id
+	inner join ref_size rs on a.prod_size = rs.size_id
+    inner join product_sub_category b on p.prod_subcateg_id = b.prod_subcateg_id
+    where p.prod_datetill is null
+    group by p.prod_subcateg_id, b.prod_subcateg_name
+	, a.prod_colour, rc.colour_value ,a.prod_size , rs.size_value;
+	
