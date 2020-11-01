@@ -65,9 +65,10 @@ CREATE VIEW store.order_view AS
 	py.payment_type,
 	(
 		select json_agg(ll) as orderitems from (
-			select l.orderdetail_id, l.prod_id, ps.prod_name, l.orderdetail_qty,l.orderdetail_price
+			select l.orderdetail_id, pd.pd_id, pr.prod_name, l.orderdetail_qty,l.orderdetail_price
 			from store.orderdetails l
-			INNER JOIN public.product pr on l.prod_id= pr.prod_id
+			INNER JOIN product_details pd on pd.pd_id=l.prod_detail_id
+			INNER JOIN public.product pr on pd.prod_id= pr.prod_id
 			INNER JOIN public.product_sub_category ps on pr.prod_subcateg_id = ps.prod_subcateg_id
 				WHERE l.order_id=o.order_id			
 		) ll
@@ -276,22 +277,33 @@ CREATE OR REPLACE PROCEDURE store.order_paid(_oid INTEGER, _price NUMERIC, _payi
 LANGUAGE 'plpgsql'
 AS $BODY$
 declare
+	
+	_tableprice NUMERIC;
 	e6 text; e7 text; e8 text; e9 text;
 	
 BEGIN
 	
-	UPDATE store.order
-	SET order_paymentdate = now(),
-		order_totalprice = _price,
-		payment_id = _payid
-	WHERE order_id = _oid
-	AND order_paymentdate IS NULL;
-	SELECT x.status, x.js INTO status, js
-	FROM store.fn_order_get(_oid) x;
+	---Totalling order value-----------
+	select sum(orderdetail_linetotal) INTO _tableprice
+	from store.orderdetails where order_id = _oid group by order_id;
+	----Checking if total price stored is same as total price passed through website------------
+	IF _tableprice = _price THEN 
+		UPDATE store.order
+		SET order_paymentdate = now(),
+			order_totalprice = _price,
+			payment_id = _payid
+		WHERE order_id = _oid
+		AND order_paymentdate IS NULL;
+		SELECT x.status, x.js INTO status, js
+		FROM store.fn_order_get(_oid) x;
+		
+	ELSE
+		RAISE EXCEPTION 'Order Price is not matching. Please return!';
+	END IF;
 	exception
-	when others then get stacked diagnostics e6=returned_sqlstate, e7=message_text, e8=pg_exception_detail, e9=pg_exception_context;
-	js := json_build_object('code',e6,'message',e7,'detail',e8,'context',e9);
-	status := 500;
+		when others then get stacked diagnostics e6=returned_sqlstate, e7=message_text, e8=pg_exception_detail, e9=pg_exception_context;
+		js := json_build_object('code',e6,'message',e7,'detail',e8,'context',e9);
+		status := 500;
 
 END;
 $BODY$;
