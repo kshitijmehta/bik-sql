@@ -114,6 +114,13 @@ create table product_details(
 	, prod_size INTEGER REFERENCES ref_size(size_id)
 	, prod_qty integer
 )
+----------------------08 Nov 20----------------------------------------------
+-----Order table modification---------
+alter table store.order
+add column coupon_id integer references public.coupon(coupon_id)
+
+alter table store.order
+add column user_discount varchar
 
 
 
