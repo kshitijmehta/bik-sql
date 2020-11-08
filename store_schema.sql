@@ -17,6 +17,8 @@ CREATE TABLE store.order(
 	order_number INTEGER,
 	address_id integer references public.user_address(addr_id),
 	order_date TIMESTAMP,
+	coupon_id INTEGER REFERENCES public.coupon(coupon_id),
+	user_discount varchar,
 	order_totalprice NUMERIC,	
 	order_paymentdate TIMESTAMP,
 	payment_id INTEGER REFERENCES store.payment(payment_id)
@@ -473,4 +475,51 @@ CREATE INDEX orderdetails_order_id_idx
     ON store.orderdetails USING btree
     (order_id ASC NULLS LAST)
     TABLESPACE pg_default;
+    
+ ------------------Function price check-------------------------------------------
+CREATE OR REPLACE FUNCTION store.fncheckPrice (
+	_orderid INTEGER
+,	_webtotalvalue NUMERIC
+,	_couponvalue FLOAT DEFAULT NULL
+,	_userdiscount FLOAT DEFAULT NULL
+,	OUT _finaltotalvalue NUMERIC
+,	OUT status BOOLEAN)
+
+LANGUAGE 'plpgsql'
+AS
+$BODY$
+
+DECLARE
+	_actualtotalvalue NUMERIC;
+	_calculatedvalue NUMERIC;
+	
+BEGIN
+	
+	
+	SELECT SUM(orderdetail_linetotal) INTO _actualtotalvalue
+	FROM store.orderdetails WHERE order_id= _orderid
+	GROUP BY order_id;
+	
+	_calculatedvalue = _actualtotalvalue;
+	
+	IF _couponvalue is not null THEN
+		_calculatedvalue = _calculatedvalue - (_calculatedvalue * (_couponvalue/100));
+	END IF;
+	
+	IF _userdiscount is not null THEN
+		_calculatedvalue = _calculatedvalue - (_calculatedvalue * (_userdiscount/100));
+	END IF;
+	
+	IF _calculatedvalue = _webtotalvalue THEN
+		STATUS = TRUE;
+		_finaltotalvalue = _webtotalvalue;
+	ELSE
+	----when web passed value is incorrect------------
+		_finaltotalvalue = _calculatedvalue;
+		status=FALSE;
+	END IF;
+		
+END;
+
+$BODY$;
 
