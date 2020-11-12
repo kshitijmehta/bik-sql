@@ -122,6 +122,12 @@ add column coupon_id integer references public.coupon(coupon_id)
 alter table store.order
 add column user_discount varchar
 
+---------------------12 Nov 20--------------------------------------------
+-----Product Table Modification------------------
+alter table product
+add column prod_datetimeinserted TIMESTAMP
+
+
 
 
 
