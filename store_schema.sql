@@ -522,4 +522,86 @@ BEGIN
 END;
 
 $BODY$;
+	
+--------------------------------------------Kshitij--------------------------
+-- FUNCTION: store.fncheckprice(numeric, integer, numeric, double precision)
+
+-- DROP FUNCTION store.fncheckprice(numeric, integer, numeric, double precision);
+
+CREATE OR REPLACE FUNCTION store.fncheckprice(
+	_user_id numeric,
+	_order_id integer,
+	_webtotalvalue numeric,
+	_couponvalue double precision DEFAULT NULL::double precision,
+	OUT _finaltotalvalue numeric,
+	OUT status boolean)
+    RETURNS record
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+    
+AS $BODY$
+
+DECLARE
+	_actualtotalvalue NUMERIC;
+	_calculatedvalue NUMERIC;
+	_userdiscount double precision;
+    _f record;
+	_actual_price numeric;
+BEGIN
+
+---------update orderdetails table price with latest product ----------
+	for _f in select prod_detail_id, orderdetail_id, orderdetail_price_id
+		   from store.orderdetails where order_id = _order_id
+	loop 
+		if _f.orderdetail_price_id = 1 then
+			select prod_inr_price into _actual_price from public.product_details 
+			where pd_id = _f.prod_detail_id;
+		else 
+			select prod_usd_price into _actual_price from public.product_details 
+			where pd_id = _f.prod_detail_id;
+		end if;
+
+		update store.orderdetails as ab set orderdetail_price = _actual_price
+		where ab.orderdetail_id = _f.orderdetail_id;
+	end loop;
+
+-------------------calculating the total price-----------------
+	SELECT SUM(orderdetail_linetotal) INTO _actualtotalvalue
+	FROM store.orderdetails WHERE order_id= _order_id
+	GROUP BY order_id;
+
+	----------getting userdiscount------------
+	SELECT user_discount INTO _userdiscount
+	FROM public.users 
+	WHERE user_id = _user_id;
+	
+	_calculatedvalue = _actualtotalvalue;
+
+	IF _couponvalue is not null THEN
+		_calculatedvalue = _calculatedvalue - (_calculatedvalue * (_couponvalue/100));
+	END IF;
+
+	IF _userdiscount is not null THEN
+		_calculatedvalue = _calculatedvalue - (_calculatedvalue * (_userdiscount/100));
+	END IF;
+
+	IF _calculatedvalue = _webtotalvalue THEN
+		STATUS = TRUE;
+		_finaltotalvalue = _webtotalvalue;
+	ELSE
+	----when web passed value is incorrect------------
+		_finaltotalvalue = _calculatedvalue;
+		status=FALSE;
+	END IF;
+
+END;
+
+$BODY$;
+
+ALTER FUNCTION store.fncheckprice(numeric, integer, numeric, double precision)
+    OWNER TO postgres;
+
+									   
 
