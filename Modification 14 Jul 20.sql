@@ -127,6 +127,12 @@ add column user_discount varchar
 alter table product
 add column prod_datetimeinserted TIMESTAMP
 
+------------------16 Nov 20----------------------
+-----Product Table Modification------------------
+alter table product
+add column prod_trending boolean default False,
+add column prod_latest boolean default false;
+
 
 
 
