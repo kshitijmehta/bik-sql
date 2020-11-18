@@ -1,0 +1,34 @@
+CREATE OR REPLACE FUNCTION fnGetRecentOrderDetails ( _userid INTEGER)
+RETURNS TABLE (userid int, orderid int, prodname varchar(50), orderdetail_qty int, orderdetail_price numeric,
+			 	orderdetail_linetotal numeric, pd_id int, order_paymentdate timestamp, shipmentdate timestamp, shipment_deliverydate timestamp
+			 ,	prod_img_name varchar(20), prod_img_path text)
+			 
+LANGUAGE 'plpgsql'
+
+AS $BODY$
+
+	BEGIN
+			
+			RETURN QUERY
+
+			with cte_productdetails as (
+				SELECT prod.prod_id, prod.prod_name, proddet.pd_id, prodimg.prod_img_name
+					, prodimg.prod_img_path from public.product prod
+				inner join public.product_details proddet on prod.prod_id = proddet.prod_id
+				inner join public.product_image prodimg on prod.prod_id = prodimg.prod_id
+				where  prodimg.prod_img_name = (select pim.prod_img_name from product_image pim where pim.prod_id = prod.prod_id limit 1)
+				and prod.prod_datetill is null
+			)
+			select  ord.user_id, ord.order_id, ct.prod_name
+				, orddet.orderdetail_qty, orddet.orderdetail_price
+				, orddet.orderdetail_linetotal, orddet.prod_detail_id, ord.order_paymentdate 
+				, ship.shipment_date, ship.shipment_deliverydate 
+				, ct.prod_img_name, ct.prod_img_path from store.order ord
+			inner join store.orderdetails orddet on ord.order_id = orddet.order_id
+			inner join store.shipments ship on orddet.shipment_id = ship.shipment_id
+			inner join cte_productdetails ct on orddet.prod_detail_id = ct.pd_id
+			Where DATE_PART('day',now()::TIMESTAMP - ship.shipment_deliverydate::timestamp) < 30
+			AND ord.user_id = _userid;
+	END;
+
+$BODY$
