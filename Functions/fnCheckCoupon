@@ -1,0 +1,18 @@
+CREATE OR REPLACE FUNCTION fnCheckCoupon (_couponcode varchar(20))
+RETURNS VARCHAR(20)
+LANGUAGE 'plpgsql'
+AS 
+$BODY$
+
+DECLARE
+	_couponvalue VARCHAR(20);
+
+BEGIN
+	IF EXISTS (SELECT 1 from coupon where coupon_code = _couponcode and coupon_datetill is null) THEN
+		select coupon_value into _couponvalue from coupon;
+		RETURN _couponvalue;	
+	ELSE 
+		raise exception 'Invalid Coupon Code';
+	END IF;
+END;
+$BODY$;
