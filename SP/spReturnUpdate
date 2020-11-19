@@ -1,0 +1,49 @@
+CREATE OR REPLACE PROCEDURE store.spReturnUpdate( 
+	_ser INTEGER
+,	_orderdetailid INTEGER
+,	_returnstatus VARCHAR(20) DEFAULT NULL
+,	_paymentstatus VARCHAR(10) DEFAULT NULL)
+
+LANGUAGE 'plpgsql'
+AS $BODY$
+	
+	DECLARE
+	_deliverydate TIMESTAMP;
+	_returnprodqty INTEGER;
+	_pdid INTEGER;
+
+	BEGIN
+		
+			SELECT s.shipment_deliverydate into _deliverydate FROM store.orderdetails od 
+			INNER JOIN store.shipments s on od.shipment_id = s.shipment_id
+			where od.orderdetail_id=_orderdetailid;
+			
+			IF DATE_PART('day',now()::TIMESTAMP - _deliverydate::timestamp) > 30 THEN
+				RAISE EXCEPTION 'This order cannot be returned since it is older than 30 days!';
+			END IF;
+		
+			CASE _ser
+			WHEN 1 THEN ---- Customer applies for return
+				UPDATE store.orderdetails SET orderdetail_return = 'In Progress'
+				WHERE orderdetail_id=_orderdetailid;
+			
+			WHEN 2 THEN --- ADMIN updates
+				UPDATE store.orderdetails SET orderdetail_return = _returnstatus, orderdetail_returnpayment = _paymentstatus
+				WHERE orderdetail_id=_orderdetailid;
+				
+				----- If Accepted, the returned items will be added into the total qty----
+				if _returnstatus = 'Accepted' THEN
+					SELECT orderdetail_qty, prod_detail_id INTO _returnprodqty, _pdid FROM store.orderdetails
+					where orderdetail_id = _orderdetailid and orderdetail_return = 'Accepted';
+						
+					UPDATE public.product_details set prod_qty = prod_qty + _returnprodqty
+					WHERE pd_id = _pdid;
+				
+				END IF;
+			
+			ELSE
+     			 RAISE EXCEPTION 'Unexpected _ser value: %', _ser;
+  			 END CASE;
+	
+	END;
+$BODY$;
