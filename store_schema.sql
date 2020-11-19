@@ -49,7 +49,9 @@ CREATE TABLE store.orderdetails(
 	orderdetail_price NUMERIC,
 	orderdetail_price_id integer,
 	orderdetail_linetotal NUMERIC GENERATED ALWAYS AS (orderdetail_qty * orderdetail_price) STORED,
-	shipment_id INTEGER REFERENCES store.shipments(shipment_id)	
+	shipment_id INTEGER REFERENCES store.shipments(shipment_id),
+	orderdetail_return VARCHAR(20),
+	orderdetail_returnpayment VARCHAR(10)
 );
 
 CREATE INDEX ON store.orderdetails(order_id);
