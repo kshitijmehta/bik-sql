@@ -1,0 +1,24 @@
+CREATE OR REPLACE FUNCTION fnRelatedProduct ( _subcategid integer)
+RETURNS TABLE (prodid int, prod_subcateg_id int, prodname varchar(50),proddesc text,prodinrprice numeric,produsdprice numeric,
+			  	prodimgname varchar(20), prodimgpath text)
+LANGUAGE 'plpgsql'
+AS $BODY$
+	
+	BEGIN
+		RETURN QUERY
+		select prod.prod_id, prod.prod_subcateg_id, prod.prod_name
+			, prod.prod_desc, pd.prod_inr_price, pd.prod_usd_price
+			, pi.prod_img_name, pi.prod_img_path
+			from product prod
+			inner join product_details pd on prod.prod_id = pd.prod_id
+			inner join product_image pi on prod.prod_id = pi.prod_id
+			where prod.prod_subcateg_id = _subcategid AND prod.prod_datetill is null
+			and pd.prod_inr_price = (select pdp.prod_inr_price from product_details pdp where pdp.prod_id = prod.prod_id limit 1)
+			and pi.prod_img_name = (select pim.prod_img_name from product_image pim where pim.prod_id=prod.prod_id LIMIT 1)
+			--and prod.prod_id in (select distinct(pd.prod_id) from product pd where pd.prod_id=prod.prod_id)
+			--group by prod.prod_id
+			order by random() limit 8
+			;
+	END;
+
+$BODY$;
