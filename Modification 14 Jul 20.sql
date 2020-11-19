@@ -134,6 +134,12 @@ add column prod_trending boolean default False,
 add column prod_latest boolean default false;
 
 
+-----------------19 Nov 20-------------------
+-------------store.orderdetails table modification---------
+alter table store.orderdetails
+add column orderdetail_return VARCHAR(20),
+ ADD COLUMN orderdetail_returnpayment VARCHAR(10);
+
 
 
 
