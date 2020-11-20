@@ -284,6 +284,7 @@ declare
 	
 	_tableprice NUMERIC;
 	e6 text; e7 text; e8 text; e9 text;
+	_r RECORD;
 	
 BEGIN
 	
@@ -298,6 +299,16 @@ BEGIN
 			payment_id = _payid
 		WHERE order_id = _oid
 		AND order_paymentdate IS NULL;
+		-----Reducing the count of product from product details--------
+		
+		for _r in SELECT orderdetail_id, order_id, orderdetail_qty, prod_detail_id
+			from store.orderdetails WHERE order_id = _oid
+		
+		loop			
+			UPDATE public.product_details as pd SET prod_qty = prod_qty - _r.orderdetail_qty
+				WHERE pd.pd_id = _r.prod_detail_id;
+		end loop;
+		
 		SELECT x.status, x.js INTO status, js
 		FROM store.fn_order_get(_oid) x;
 		
