@@ -1,0 +1,47 @@
+ -------------------Insert Product Category----------------------
+INSERT INTO public.product_category(prod_category)
+SELECT DISTINCT productname from public.sampledata;
+------------------Insert Product Sub Categories----------------
+select * from public.product_sub_category 
+INSERT INTO public.product_sub_category (prod_name, prod_category_id)
+SELECT DISTINCT(sd.category), pc.prod_category_id FROM public.sampledata sd
+INNER JOIN public.product_category pc ON sd.productname = pc.prod_category
+ORDER BY sd.category;
+-----------------------Insert into Product table------------------
+select * from public.product 
+INSERT INTO public.product (prod_name,prod_desc,prod_subcateg_id,prod_datetimeinserted)
+SELECT CONCAT (sd.colour,' ', sd.individualdetail), sd.description, psc.prod_subcateg_id,now()
+FROM public.sampledata sd
+INNER JOIN public.product_sub_category psc ON sd.category = psc.prod_name
+ORDER BY psc.prod_subcateg_id;
+--------------------Insert Sizes--------------------
+select * from public.ref_size
+SELECT t.*  into temp table sizes from public.sampledata sd
+cross join lateral (
+values
+(sd.size1,sd.size1)
+) as t(sizes, sizecode) limit 1;
+INSERT INTO public.ref_size (size_code,size_value,prod_category_id)
+select sizecode,sizes,1 from sizes ---- Write the Product Category ID for 3rd column e.g. 1 here
+-------------Insert Colours---------------------------
+select * from public.ref_colour
+create unique index unique_color_value on public.ref_colour(lower(colour_value));---Unique index on colour values
+INSERT INTO public.ref_colour (colour_code, colour_value)
+select distinct(substring(trim(colour),0,4)), colour from public.sampledata;
+-------------Insert Product Details----------------------
+select * from public.sampledata
+select * from public.product_details
+select * from public.product
+select * from public.ref_colour
+INSERT INTO public.product_details (prod_id, prod_inr_price, prod_usd_price, prod_colour,prod_size,prod_qty) ----- 5472 rows inserted
+SELECT pr.prod_id,sd.inr, sd.usd,rc.colour_id,rs.size_id,sd.quantity from public.sampledata sd
+cross join lateral (
+values
+(sd.size1)
+) as t(sizes)
+inner join public.product pr on CONCAT (sd.colour,' ', sd.individualdetail)=pr.prod_name
+inner join public.ref_colour rc on sd.colour = rc.colour_value
+inner join public.ref_size rs on t.sizes= rs.size_value
+where t.sizes is not null
+group by pr.prod_id,sd.inr, sd.usd,rs.size_id,rc.colour_id,sd.quantity
+order by pr.prod_id;
