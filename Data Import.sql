@@ -104,4 +104,47 @@ INSERT INTO product_details (prod_id, prod_inr_price, prod_usd_price, prod_colou
 	where t.sizes is not null
 	group by pr.prod_id,sd.inr, sd.usd,rc.colour_id,rs.size_id,sd.quantity
 	order by pr.prod_id;
+--------------------------------------------------
+INSERT INTO product_category(prod_category) values ('Lingerie')
+INSERT INTO product_sub_category (prod_category_id,prod_subcateg_name)
+	VALUES	(2,'Bra');
+------------------------------------------------
+--Create table to store Bra sample data--------
+CREATE TABLE public.sampledata_bra(
+		productname varchar(20),
+		stylecode varchar(50),
+		sku	varchar(50),
+		description varchar(50),
+		mrp numeric,
+		size varchar(10),
+		colour varchar(20),
+		model varchar(100)
+	)
+------------Importing data---------------
+COPY public.sampledata_bra(stylecode,description,sku,mrp,size,colour,productname,model) FROM 'F:\KP\SB\SampleData_bra_2.csv' DELIMITER ',' CSV HEADER;
+----------Updating product tables------------------------
+INSERT INTO ref_colour (colour_value,colour_code)   --- Updating colour
+	select distinct(colour),substring(trim(colour),0,4) from sampledata_bra where colour not in 
+		(select colour_value from ref_colour)
+
+INSERT INTO	ref_size (size_value,size_code, prod_category_id) ---Updating Sizes
+	select distinct(size),size,2 from sampledata_bra order by size --- Use product category as per your own table
+
+ALTER TABLE product add column prod_sku VARCHAR(100)
+
+
+INSERT INTO product (prod_subcateg_id, prod_name,prod_desc,prod_sku,prod_datetimeinserted)  ----SKU column is holding stylecode data
+with cte_p as (
+	select distinct on (model) model, productname, stylecode, description from sampledata_bra order by model, productname,stylecode)
+	select 5, productname, description, stylecode, now() from cte_p order by productname;
+
+
+INSERT INTO product_details (prod_id,prod_inr_price,prod_size,prod_colour,prod_qty)
+	select pr.prod_id, sd.mrp, rs.size_id, rc.colour_id, 10 from sampledata_bra sd 
+	inner join product pr on sd.stylecode = pr.prod_sku
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on sd.colour= rc.colour_value
+	order by pr.prod_id	
+--------------------------------------------------Bra end-------------------------------------
+
 
