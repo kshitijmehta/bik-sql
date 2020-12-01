@@ -146,5 +146,51 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_size,prod_colour,prod_q
 	inner join ref_colour rc on sd.colour= rc.colour_value
 	order by pr.prod_id	
 --------------------------------------------------Bra end-------------------------------------
+---------------------------Camisole Begin---------------------------------------------
+select * from product_sub_category
+INSERT INTO product_sub_category (prod_category_id, prod_subcateg_name) values (2,'Camisole')
+CREATE TABLE public.sampledata_camisole(
+		productname varchar(20),
+		stylecode varchar(50),
+		sku	varchar(50),
+		description text,
+		mrp numeric,
+		usd numeric,
+		size varchar(10),
+		colour varchar(20),
+		model varchar(100)
+	)
+------Importing data-----------------
+COPY public.sampledata_camisole(stylecode,description,sku,mrp,size,colour,productname,model) FROM 'F:\KP\SB\Data\Lingerie\camisole_csv.csv' DELIMITER ',' CSV HEADER;
+---------------
+--------Insert size
+INSERT INTO ref_size (size_value,size_code,prod_category_id)
+	select distinct(size),size,2 from sampledata_camisole
+--------Insert Colour
+INSERT INTO ref_colour (colour_value,colour_code)  
+	select distinct(colour),substring(trim(colour),0,4) from sampledata_camisole where colour not in 
+		(select colour_value from ref_colour)
+--------Insert product and details
+select distinct(stylecode),productname from sampledata_camisole
+INSERT INTO product (prod_subcateg_id, prod_name,prod_desc,prod_sku,prod_datetimeinserted)  ----SKU column is holding stylecode data
+with cte_p as (
+	select distinct on (stylecode) stylecode, productname,  description from sampledata_camisole order by stylecode,productname)
+	select 6, productname, description, stylecode, now() from cte_p order by productname;
+select * from product_sub_category
+select * from product  order by prod_datetimeinserted desc, prod_id
+select count(*) from sampledata_camisole where mrp=500
 
+update sampledata_camisole set usd = 6.80
+where mrp = 500
+
+update sampledata_camisole set usd = 8.16
+where mrp = 600
+	
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty)
+	select pr.prod_id, sd.mrp, sd.usd, rs.size_id, rc.colour_id, 30 from sampledata_camisole sd 
+	inner join product pr on sd.stylecode = pr.prod_sku
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on sd.colour= rc.colour_value
+	order by pr.prod_id	
+----------------------Camisole end----------------------------------------
 
