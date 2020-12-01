@@ -1,0 +1,3303 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 12.3
+-- Dumped by pg_dump version 12.3
+
+-- Started on 2020-12-01 16:19:40
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 9 (class 2615 OID 33405)
+-- Name: store; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA store;
+
+
+ALTER SCHEMA store OWNER TO postgres;
+
+--
+-- TOC entry 301 (class 1255 OID 33862)
+-- Name: alluserinformation(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.alluserinformation() RETURNS TABLE(userid integer, fname character varying, lname character varying, mobno character varying, dob date, gender character, emailid character varying, userdiscount character varying, addrid integer, addrline1 character varying, addrline2 character varying, addrline3 character varying, city character varying, state character varying, pincode character varying, country character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	
+	RETURN QUERY 
+	select a.user_id,a.user_fname, a.user_lname, a.user_mobileno,
+	a.user_dob,a.user_gender,a.user_emailaddr, a.user_discount,
+	b.addr_id,b.addr_line1,b.addr_line2,b.addr_line3,
+	b.addr_city, b.addr_state, b.addr_pincode, b.addr_country
+	from users a
+	left join user_address b ON b.user_id = a.user_id
+	where a.user_typecode = 'c' and b.addr_datetill is null;
+
+END
+
+$$;
+
+
+ALTER FUNCTION public.alluserinformation() OWNER TO postgres;
+
+--
+-- TOC entry 302 (class 1255 OID 33871)
+-- Name: fnadminproductselect(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnadminproductselect() RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc text, qty bigint, trending boolean, latest boolean)
+    LANGUAGE plpgsql
+    AS $$
+	
+	BEGIN
+		
+		RETURN QUERY 
+		
+		with cte_productgetdetails as (
+		select a.prod_category, b.prod_subcateg_id
+		, c.prod_id, c.prod_name, c.prod_desc, c.prod_trending, c.prod_latest from 
+		product_sub_category b inner join  product_category a  on  b.prod_category_id =a.prod_category_id 
+		inner join product c on b.prod_subcateg_id = c.prod_subcateg_id
+		where c.prod_datetill is null
+		)
+		select prod_id, prod_category, prod_name
+		, prod_desc , sum(pd.prod_qty) as Qty, ct.prod_trending, ct.prod_latest  from product_details pd 
+		inner join cte_productgetdetails ct using (prod_id)
+		inner join ref_colour rc on pd.prod_colour = rc.colour_id
+		inner join ref_size rs on pd.prod_size = rs.size_id
+		group by prod_id,prod_category, prod_name, prod_desc,ct.prod_trending, ct.prod_latest;
+		
+		
+		
+-- 		RETURN QUERY
+-- 		SELECT b.prod_id,c.prod_category, a.prod_name,a.prod_desc, b.prod_inr_price,
+-- 		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty FROM product_sub_category a
+-- 		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+-- 		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+-- 		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
+-- 		LEFT JOIN ref_size e ON e.size_id = b.prod_size
+-- 		ORDER BY b.prod_id;
+	
+	END
+
+$$;
+
+
+ALTER FUNCTION public.fnadminproductselect() OWNER TO postgres;
+
+--
+-- TOC entry 294 (class 1255 OID 33894)
+-- Name: fncheckcoupon(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fncheckcoupon(_couponcode character varying) RETURNS TABLE(cp_id integer, cp_code character varying, cp_value character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+_couponvalue VARCHAR(20);
+
+BEGIN
+
+	IF EXISTS (SELECT 1 from coupon where LOWER(coupon.coupon_code) = LOWER(_couponcode) and coupon_datetill is null) THEN
+		RETURN QUERY
+			select coupon.coupon_id, coupon.coupon_code, coupon.coupon_value from coupon where LOWER(coupon.coupon_code) = LOWER(_couponcode);
+		ELSE
+			raise exception 'Invalid Coupon Code';
+		END IF;
+	END;
+$$;
+
+
+ALTER FUNCTION public.fncheckcoupon(_couponcode character varying) OWNER TO postgres;
+
+--
+-- TOC entry 299 (class 1255 OID 42109)
+-- Name: fncheckifuseremailexists(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fncheckifuseremailexists(_useremail character varying) RETURNS TABLE(user_id integer)
+    LANGUAGE plpgsql
+    AS $$
+
+ 
+
+BEGIN
+    
+    RETURN QUERY 
+    select users.user_id
+    from users
+    where user_emailaddr = _userEmail;
+
+ 
+
+END
+
+ 
+
+$$;
+
+
+ALTER FUNCTION public.fncheckifuseremailexists(_useremail character varying) OWNER TO postgres;
+
+--
+-- TOC entry 256 (class 1255 OID 16827)
+-- Name: fncolourselect(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fncolourselect() RETURNS TABLE(col_id integer, col_code character varying, col_value character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	
+	RETURN QUERY
+	SELECT colour_id, colour_code, colour_value from ref_colour
+	WHERE colour_datetill is null;
+
+END
+
+$$;
+
+
+ALTER FUNCTION public.fncolourselect() OWNER TO postgres;
+
+--
+-- TOC entry 258 (class 1255 OID 16860)
+-- Name: fncouponselect(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fncouponselect() RETURNS TABLE(cp_id integer, cp_code character varying, cp_value character varying)
+    LANGUAGE plpgsql
+    AS $$
+		BEGIN
+			RETURN QUERY 
+			SELECT coupon_id, coupon_code, coupon_value FROM coupon 
+			WHERE coupon_datetill is null;
+		END
+	
+	$$;
+
+
+ALTER FUNCTION public.fncouponselect() OWNER TO postgres;
+
+--
+-- TOC entry 309 (class 1255 OID 42096)
+-- Name: fngetlatesttrendingproduct(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fngetlatesttrendingproduct(i integer) RETURNS TABLE(prod_id integer, prod_categ_name character varying, prod_name character varying, prod_inr_price numeric, prod_usd_price numeric, productdetailid integer, prod_img_name character varying, prod_img_path text)
+    LANGUAGE plpgsql
+    AS $$
+	BEGIN
+		IF i = 1 THEN ---- LATEST
+			RETURN QUERY
+			
+			select a.prod_id,pc.prod_category, a.prod_name,
+				pd.prod_inr_price, pd.prod_usd_price,pd.pd_id,
+				b.prod_img_name, b.prod_img_path from public.product a
+			join public.product_sub_category ps on ps.prod_subcateg_id = a.prod_subcateg_id
+			join public.product_category pc on pc.prod_category_id = ps.prod_category_id
+			left join public.product_image b on a.prod_id=b.prod_id 
+			left join public.product_details pd on a.prod_id = pd.prod_id
+			where a.prod_id in (select pd.prod_id from product_details pd)
+			and a.prod_datetill is null
+			and a.prod_latest = true 
+			and pd.pd_id = (select pds.pd_id from public.product_details pds where pds.prod_id = a.prod_id LIMIT 1)
+			and b.prod_img_name = (select pi.prod_img_name from public.product_image pi where pi.prod_id=a.prod_id LIMIT 1)
+			LIMIT 12;
+		
+		ELSEIF i = 2 THEN ---- TRENDING
+			
+			RETURN QUERY
+			
+			select a.prod_id ,pc.prod_category,a.prod_name,
+				pd.prod_inr_price, pd.prod_usd_price,pd.pd_id,
+				b.prod_img_name, b.prod_img_path from public.product a
+			join public.product_sub_category ps on ps.prod_subcateg_id = a.prod_subcateg_id
+			join public.product_category pc on pc.prod_category_id = ps.prod_category_id
+			left join public.product_image b on a.prod_id=b.prod_id 
+			left join public.product_details pd on a.prod_id = pd.prod_id
+			where a.prod_id in (select pd.prod_id from product_details pd)
+			and a.prod_datetill is null
+			and a.prod_trending = true
+			and pd.pd_id = (select pds.pd_id from public.product_details pds where pds.prod_id = a.prod_id LIMIT 1)
+			and b.prod_img_name = (select pi.prod_img_name from public.product_image pi where pi.prod_id=a.prod_id LIMIT 1)
+			LIMIT 12;
+		
+		END IF;
+	
+	END;
+
+$$;
+
+
+ALTER FUNCTION public.fngetlatesttrendingproduct(i integer) OWNER TO postgres;
+
+--
+-- TOC entry 257 (class 1255 OID 16851)
+-- Name: fnprodsubcategselect(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnprodsubcategselect() RETURNS TABLE(ps_id integer, cat_name character varying, cat_id integer, ps_name character varying, ps_desc text)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+		RETURN QUERY
+		SELECT a.prod_subcateg_id, b.prod_category, b.prod_category_id, a.prod_name, a.prod_desc FROM product_sub_category a 
+		INNER JOIN product_category b ON a.prod_category_id = b.prod_category_id;
+END
+
+$$;
+
+
+ALTER FUNCTION public.fnprodsubcategselect() OWNER TO postgres;
+
+--
+-- TOC entry 310 (class 1255 OID 42101)
+-- Name: fnproductlistselect(text, text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnproductlistselect(_colour text DEFAULT NULL::text, _size text DEFAULT NULL::text, _price text DEFAULT NULL::text, _prodcategid text DEFAULT NULL::text, _subcategid text DEFAULT NULL::text, _prodname text DEFAULT NULL::text) RETURNS TABLE(prodid integer, prodcategory character varying, prodsubcategory character varying, prodname character varying, proddesc text, inrprice numeric, usdprice numeric, proddetailid integer, colour character varying, size character varying, qty integer, prodimgpath text, prodimgname character varying)
+    LANGUAGE plpgsql
+    AS $_$
+	
+	DECLARE
+	
+	_sql TEXT := 'SELECT b.prod_id, c.prod_category,a.prod_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
+		pd.prod_usd_price, pd.pd_id, d.colour_value, e.size_value,pd.prod_qty,f.prod_img_path,f.prod_img_name FROM product_sub_category a
+		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+		INNER JOIN product_details pd ON b.prod_id = pd.prod_id
+		LEFT JOIN ref_colour d ON d.colour_id = pd.prod_colour
+		LEFT JOIN ref_size e ON e.size_id = pd.prod_size 
+		LEFT JOIN product_image f ON b.prod_id = f.prod_id ';
+	--	WHERE
+	--	f.prod_img_path  = (select prod_img_path from product_image where prod_id= b.prod_id LIMIT 1)'; 
+		--WHERE 1=1 ';
+	_where TEXT;
+
+	BEGIN
+		 
+		 _where = CONCAT_WS(' AND '
+						  -- ,  CASE WHEN _colour IS NOT NULL THEN '('||_colour||')' END
+							, 'f.prod_img_path  = (select prod_img_path from product_image where prod_id= b.prod_id LIMIT 1)'
+						   ,  CASE WHEN _colour IS NOT NULL THEN 'd.colour_id in ' ||_colour||' ' END
+						   ,  CASE WHEN _size IS NOT NULL THEN 'e.size_id in ' || _size||' ' END
+						   ,  CASE WHEN _prodcategid IS NOT NULL THEN 'c.prod_category_id in '|| _prodcategid  END
+							, CASE WHEN _subcategid IS NOT NULL THEN 'a.prod_subcateg_id in '||_subcategid||' ' END
+						   ,  CASE WHEN _price IS NOT NULL THEN _price END||' '	
+						   ,  CASE WHEN _prodname IS NOT NULL THEN 'lower(b.prod_name) like lower(''%'||_prodname||'%'') ' END||' ');
+		
+		 IF _where <> '' THEN
+ 		 	_sql :=_sql ||' where '|| _where ||' order by b.prod_id';
+			--_sql :=_sql || _where ||' order by b.prod_id';
+		
+		 ELSE
+		  
+		 	_sql := _sql ||' order by b.prod_id';
+		
+		END IF;
+			 RETURN QUERY
+			 
+			 EXECUTE _sql
+			 USING $1,$2,$3,$4,$5,$6;
+		END
+$_$;
+
+
+ALTER FUNCTION public.fnproductlistselect(_colour text, _size text, _price text, _prodcategid text, _subcategid text, _prodname text) OWNER TO postgres;
+
+--
+-- TOC entry 283 (class 1255 OID 33277)
+-- Name: fnproductselectfilter(integer, integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnproductselectfilter(_cid integer DEFAULT NULL::integer, _sid integer DEFAULT NULL::integer, _pcid integer DEFAULT NULL::integer) RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc text, inrprice numeric, usdprice numeric, colour character varying, size character varying, qty integer, prodimgpath text)
+    LANGUAGE plpgsql
+    AS $_$
+	
+	DECLARE
+	
+	_sql TEXT := 'SELECT b.prod_id, a.prod_name, b.prod_name ,a.prod_desc, b.prod_inr_price,
+		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty
+		,f.prod_img_path
+		FROM product_sub_category a
+		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
+		LEFT JOIN ref_size e ON e.size_id = b.prod_size 
+		LEFT JOIN product_image f ON b.prod_id = f.prod_id WHERE
+		b.prod_datetill is null and
+		f.prod_img_path  = (select prod_img_path from product_image where prod_id= b.prod_id LIMIT 1) '
+		;
+	--	WHERE 1=1 ';
+	_where TEXT;
+	
+	BEGIN
+		 
+		 _where = CONCAT_WS('AND'
+						   ,  CASE WHEN _cid IS NOT NULL THEN ' d.colour_id=$1 ' END
+						   ,  CASE WHEN _sid IS NOT NULL THEN ' e.size_id = $2 ' END
+						   ,  CASE WHEN _pcid IS NOT NULL THEN ' c.prod_category_id = $3 ' END);
+		
+		 IF _where <> '' THEN
+		 	--_sql :=_sql ||'where '|| _where ||'order by b.prod_id';
+			_sql :=_sql ||'and'|| _where ||'order by b.prod_id';
+		
+		 ELSE
+		  
+		 	_sql := _sql ||'order by b.prod_id';
+		
+		END IF;
+			 RETURN QUERY
+			 
+			 EXECUTE _sql
+			 USING $1,$2,$3;
+		END
+$_$;
+
+
+ALTER FUNCTION public.fnproductselectfilter(_cid integer, _sid integer, _pcid integer) OWNER TO postgres;
+
+--
+-- TOC entry 306 (class 1255 OID 42078)
+-- Name: fnrelatedproduct(integer, integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnrelatedproduct(_subcategid integer, _productid integer) RETURNS TABLE(prodid integer, prod_categ_name character varying, prodname character varying, productdetailid integer, prodinrprice numeric, produsdprice numeric, prodimgname character varying, prodimgpath text)
+    LANGUAGE plpgsql
+    AS $$
+	
+	BEGIN
+		RETURN QUERY
+		select * FROM ( SELECT DISTINCT ON (prod.prod_id) prod.prod_id,pc.prod_category , prod.prod_name
+			,pd.pd_id, pd.prod_inr_price, pd.prod_usd_price
+			, pi.prod_img_name, pi.prod_img_path
+			from product prod
+			inner join product_sub_category psc on prod.prod_subcateg_id = psc.prod_subcateg_id
+			inner join product_category pc on pc.prod_category_id = psc.prod_category_id
+			inner join product_details pd on prod.prod_id = pd.prod_id
+			inner join product_image pi on prod.prod_id = pi.prod_id
+			where prod.prod_subcateg_id = _subcategid AND prod.prod_datetill is null AND prod.prod_id != _productid
+			and pd.prod_inr_price = (select pdp.prod_inr_price from product_details pdp where pdp.prod_id = prod.prod_id limit 1)
+			and pi.prod_img_name = (select pim.prod_img_name from product_image pim where pim.prod_id=prod.prod_id LIMIT 1)) AS product
+			order by random() limit 8;
+	END;
+
+$$;
+
+
+ALTER FUNCTION public.fnrelatedproduct(_subcategid integer, _productid integer) OWNER TO postgres;
+
+--
+-- TOC entry 290 (class 1255 OID 33404)
+-- Name: fnsingleproductselect(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnsingleproductselect(_prod_id integer) RETURNS TABLE(prodid integer, prodcategory character varying, prodname character varying, proddesc text, proddetailid text, inrprice text, usdprice text, colour text, colourid text, size text, sizeid text, qty text, subcategoryid integer, imagename text, imagepath text)
+    LANGUAGE plpgsql
+    AS $$
+	
+	BEGIN
+		
+		RETURN QUERY
+		with cte_productgetdetails as (
+		select a.prod_category, b.prod_subcateg_id
+		, c.prod_id, c.prod_name, c.prod_desc from 
+		product_sub_category b 
+		inner join product_category a  on  b.prod_category_id =a.prod_category_id 
+		inner join product c on b.prod_subcateg_id = c.prod_subcateg_id
+		where prod_id = _prod_id
+		),
+		cte_productimage as(
+		select prod_id
+		 , string_agg(pi.prod_img_name,',' ) Images
+		, string_agg(pi.prod_img_path,',' ) ImagePath
+		from product_image pi  where prod_id = _prod_id group by prod_id
+		)
+		select pd.prod_id
+		, ct.prod_category, ct.prod_name, ct.prod_desc
+		, string_agg(CAST (pd.pd_id as CHARACTER VARYING),',' order by pd.pd_id) Product_Detail_Id
+		, string_agg(pd.prod_inr_price::CHARACTER VARYING,',' order by pd.pd_id) INR_Price
+		, string_agg(pd.prod_usd_price::CHARACTER VARYING,',' order by pd.pd_id) USD_Price
+		, string_agg(rc.colour_value,',' order by pd.pd_id) Colour
+		, string_agg(CAST (rc.colour_id as CHARACTER VARYING),',' order by pd.pd_id) Colour_Id
+		, string_agg(rs.size_value,',' order by pd.pd_id) Size
+		, string_agg(CAST (rs.size_id as CHARACTER VARYING),',' order by pd.pd_id) Size_Id
+		, string_agg(pd.prod_qty::CHARACTER VARYING,',' order by pd.pd_id) Qty
+		, ct.prod_subcateg_id
+		, cpi.Images
+		, cpi.ImagePath
+		from product_details pd
+		inner join cte_productgetdetails ct using (prod_id)
+		left join cte_productimage cpi on pd.prod_id= cpi.prod_id
+		inner join ref_colour rc on pd.prod_colour = rc.colour_id
+		inner join ref_size rs on pd.prod_size = rs.size_id
+		where pd.prod_id = _prod_id
+		group by pd.prod_id, ct.prod_category, ct.prod_name, ct.prod_desc, ct.prod_subcateg_id, cpi.Images,cpi.ImagePath;
+		
+-- 		SELECT b.prod_id,c.prod_category, b.prod_name,b.prod_desc, b.prod_inr_price,
+-- 		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
+-- 		b.prod_size, b.prod_colour, string_agg(f.prod_img_name, ', '),string_agg(f.prod_img_path, ', ')
+-- 		FROM product_sub_category a
+-- 		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
+-- 		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
+-- 		LEFT JOIN ref_colour d ON d.colour_id = b.prod_colour
+-- 		LEFT JOIN ref_size e ON e.size_id = b.prod_size
+-- 		LEFT JOIN product_image f ON f.prod_id = b.prod_id
+-- 		WHERE b.prod_id = _prod_id AND b.prod_datetill is null
+-- 		GROUP BY  b.prod_id,c.prod_category, b.prod_name,a.prod_desc, b.prod_inr_price,
+-- 		b.prod_usd_price, d.colour_value, e.size_value,b.prod_qty, b.prod_subcateg_id, 
+-- 		b.prod_size, b.prod_colour;
+	
+	END
+
+$$;
+
+
+ALTER FUNCTION public.fnsingleproductselect(_prod_id integer) OWNER TO postgres;
+
+--
+-- TOC entry 278 (class 1255 OID 16852)
+-- Name: fnsizeselect(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.fnsizeselect() RETURNS TABLE(s_id integer, s_code character varying, s_value character varying, prod_category integer, prod_categoryname character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	
+	RETURN QUERY
+	SELECT size_id, size_code, size_value, a.prod_category_id,b.prod_category from ref_size a
+	inner join product_category b on a.prod_category_id = b.prod_category_id
+	WHERE a.size_datetill is null;
+
+END
+
+$$;
+
+
+ALTER FUNCTION public.fnsizeselect() OWNER TO postgres;
+
+--
+-- TOC entry 308 (class 1255 OID 42117)
+-- Name: getuseridpassword(text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.getuseridpassword(_email text) RETURNS TABLE(userid integer, userpassword text, usertype character)
+    LANGUAGE plpgsql
+    AS $_$
+
+BEGIN
+	
+	RETURN QUERY 
+	select user_id, user_password, user_typecode
+	from users
+	where user_emailaddr =$1;
+
+END
+
+$_$;
+
+
+ALTER FUNCTION public.getuseridpassword(_email text) OWNER TO postgres;
+
+--
+-- TOC entry 275 (class 1255 OID 16646)
+-- Name: passwordchange(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.passwordchange(_userid integer) RETURNS TABLE(user_password text)
+    LANGUAGE plpgsql
+    AS $_$
+
+BEGIN
+	
+	RETURN QUERY 
+	select user_password
+	from users
+	where user_id =$1;
+
+END
+
+$_$;
+
+
+ALTER FUNCTION public.passwordchange(_userid integer) OWNER TO postgres;
+
+--
+-- TOC entry 303 (class 1255 OID 33863)
+-- Name: personalinfoselect(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.personalinfoselect(_userid integer) RETURNS TABLE(userid integer, fname character varying, lname character varying, mobno character varying, dob date, gender character, emailid character varying, discount character varying, addrid integer, addrline1 character varying, addrline2 character varying, addrline3 character varying, city character varying, state character varying, pincode character varying, country character varying)
+    LANGUAGE plpgsql
+    AS $_$
+
+BEGIN
+	
+	RETURN QUERY 
+	select a.user_id,a.user_fname, a.user_lname, a.user_mobileno,
+	a.user_dob,a.user_gender,a.user_emailaddr, a.user_discount,b.addr_id,b.addr_line1,b.addr_line2,b.addr_line3,
+	b.addr_city, b.addr_state, b.addr_pincode, b.addr_country
+	from users a
+	left join user_address b ON b.user_id = a.user_id
+	where a.user_id= $1 and b.addr_datetill is null;
+
+END
+
+$_$;
+
+
+ALTER FUNCTION public.personalinfoselect(_userid integer) OWNER TO postgres;
+
+--
+-- TOC entry 314 (class 1255 OID 42153)
+-- Name: spaddressinsertupdatedelete(integer, integer, integer, character, character varying, character varying, character varying, character varying, character varying, character varying, character varying, numeric); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spaddressinsertupdatedelete(_ser integer, _userid integer, _addrserial integer, _typecode character, _line1 character varying, _line2 character varying, _line3 character varying, _city character varying, _state character varying, _pincode character varying, _country character varying, INOUT _addressid numeric DEFAULT NULL::numeric)
+    LANGUAGE plpgsql
+    AS $$
+
+begin 
+	if _ser =1 then
+		
+		insert into user_address (user_id, addr_serial, addr_type_code, addr_line1, addr_line2, addr_line3, 
+								addr_city, addr_state, addr_pincode,addr_country, addr_datetimecreated)
+		values (_userid, _addrserial, _typecode, _line1, _line2, _line3, _city, _state, _pincode,
+			   _country, now()) returning addr_id into _addressId;
+	
+	end if;
+	
+	if _ser=2 then --Update address
+	
+		update user_address
+		set addr_datetill = now()
+		where user_id=_userid;
+		
+		insert into user_address (user_id, addr_serial, addr_type_code, addr_line1, addr_line2, addr_line3, 
+								addr_city, addr_state, addr_pincode,addr_country, addr_datetimecreated)
+		values (_userid, _addrserial, _typecode, _line1, _line2, _line3, _city, _state, _pincode,
+			   _country, now()) returning addr_id into _addressId;
+	end if;
+
+end
+$$;
+
+
+ALTER PROCEDURE public.spaddressinsertupdatedelete(_ser integer, _userid integer, _addrserial integer, _typecode character, _line1 character varying, _line2 character varying, _line3 character varying, _city character varying, _state character varying, _pincode character varying, _country character varying, INOUT _addressid numeric) OWNER TO postgres;
+
+--
+-- TOC entry 261 (class 1255 OID 16834)
+-- Name: spcolourinsertupdatedelete(integer, character varying, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spcolourinsertupdatedelete(_ser integer, _code character varying, _value character varying, _cid integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	IF _ser =1 THEN --Insert Block
+		INSERT INTO ref_colour 
+		VALUES(_code, _value);
+	
+	ELSEIF _ser =2 THEN
+		UPDATE ref_colour 
+			SET colour_code = _code,
+				colour_value = _value
+			WHERE colour_id = _cid;
+		
+	ELSEIF _ser = 3 THEN --- DELETE
+		UPDATE ref_colour SET colour_datetill=now()
+		WHERE colour_id = _cid;
+	
+	END IF;
+END
+
+$$;
+
+
+ALTER PROCEDURE public.spcolourinsertupdatedelete(_ser integer, _code character varying, _value character varying, _cid integer) OWNER TO postgres;
+
+--
+-- TOC entry 280 (class 1255 OID 16861)
+-- Name: spcouponinsertupdatedelete(integer, character varying, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spcouponinsertupdatedelete(_ser integer, _cp_code character varying, _cp_value character varying, INOUT _cp_id integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+
+	BEGIN
+		CASE _ser
+		WHEN 1 THEN --- INSERT
+			INSERT INTO coupon 
+				   (coupon_code, coupon_value)
+			VALUES (_cp_code   , _cp_value   );
+		
+		WHEN 2 THEN --- UPDATE
+			UPDATE coupon
+			SET		(coupon_code, coupon_value)
+				   =(_cp_code   , _cp_value)
+			WHERE coupon_id = _cp_id;
+		
+		WHEN 3 THEN --- DELETE
+			UPDATE coupon
+			SET coupon_datetill = now()
+			WHERE coupon_id = _cp_id;
+		
+		ELSE 
+			RAISE EXCEPTION 'Unexpected Serial Value: %', _ser;
+		END CASE;
+		
+	
+	END
+
+$$;
+
+
+ALTER PROCEDURE public.spcouponinsertupdatedelete(_ser integer, _cp_code character varying, _cp_value character varying, INOUT _cp_id integer) OWNER TO postgres;
+
+--
+-- TOC entry 282 (class 1255 OID 33264)
+-- Name: spimageinsertupdatedelete(integer, integer, character varying, text, character varying, text, character varying, text, character varying, text, character varying, text, integer, text[]); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spimageinsertupdatedelete(_ser integer, _prodid integer, _name1 character varying DEFAULT NULL::character varying, _img1path text DEFAULT NULL::text, _name2 character varying DEFAULT NULL::character varying, _img2path text DEFAULT NULL::text, _name3 character varying DEFAULT NULL::character varying, _img3path text DEFAULT NULL::text, _name4 character varying DEFAULT NULL::character varying, _img4path text DEFAULT NULL::text, _name5 character varying DEFAULT NULL::character varying, _img5path text DEFAULT NULL::text, _imgid integer DEFAULT NULL::integer, _imgpaths text[] DEFAULT NULL::text[])
+    LANGUAGE plpgsql
+    AS $_$
+	DECLARE  
+	_sql TEXT := 'INSERT INTO product_image (prod_id, prod_img_name, prod_img_path) 
+	 		VALUES ($2,$3,$4)';
+	_val text;
+			
+
+BEGIN 
+
+	IF _ser = 1 THEN -- insert
+-- 		INSERT INTO product_image (prod_id, prod_img_name, prod_img_path) 
+-- 		VALUES (_prodid,_name1, _imgpath1),(_prodid, _name2, _imgpath2),(_prodid, _name3, _imgpath3),
+-- 				(_prodid, _name4, _imgpath4),(_prodid, _name5, _imgpath5);
+		_val = CONCAT (
+				CASE WHEN _name2 IS NOT NULL THEN ',($2,$5,$6)' END,
+				CASE WHEN _name3 IS NOT NULL THEN ',($2,$7,$8)' END,
+				CASE WHEN _name4 IS NOT NULL THEN ',($2,$9,$10)' END,
+				CASE WHEN _name5 IS NOT NULL THEN ',($2,$11,$12)' END
+		);
+		
+		IF _val <> '' THEN
+			_sql := _sql || _val ||';';
+		ELSE
+			_sql := _sql || ';';
+		END IF;
+		
+		EXECUTE _sql
+		USING _ser,_prodid,_name1,_img1path,_name2,_img2path,
+			  _name3, _img3path, _name4, _img4path, _name5, _img5path;
+	
+	ELSEIF _ser = 2 THEN --update
+		UPDATE product_image set
+		 prod_img_name = _name1,
+		 prod_img_path = _img1path
+		 where prod_img_id = _imgid;
+		 
+	ELSEIF _ser = 3 THEN --DELETE
+		DELETE FROM product_image WHERE prod_img_path =ANY(ARRAY[_imgpaths]);
+	
+	END IF;
+		 
+	
+
+END
+
+$_$;
+
+
+ALTER PROCEDURE public.spimageinsertupdatedelete(_ser integer, _prodid integer, _name1 character varying, _img1path text, _name2 character varying, _img2path text, _name3 character varying, _img3path text, _name4 character varying, _img4path text, _name5 character varying, _img5path text, _imgid integer, _imgpaths text[]) OWNER TO postgres;
+
+--
+-- TOC entry 277 (class 1255 OID 16829)
+-- Name: spprodsubcateginsertupdatedelete(integer, integer, character varying, text, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spprodsubcateginsertupdatedelete(_ser integer, _pcid integer, _name character varying, _desc text, _psid integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	
+	IF _ser=1 THEN -- INSERT
+	
+		INSERT INTO product_sub_category (prod_category_id, prod_name, prod_desc)
+		VALUES (_pcid, _name, _desc);
+		
+	ELSEIF _ser=2 THEN --UPDATE
+		
+		UPDATE product_sub_category SET
+		 prod_category_id = _pcid,
+		 prod_name = _name,
+		 prod_desc = _desc
+		 where prod_subcateg_id = _psid;
+		 
+	ELSEIF _ser=3 THEN --DELETE
+		IF EXISTS (SELECT 1 FROM product_sub_category a 
+				    INNER JOIN product b on a.prod_subcateg_id = b.prod_subcateg_id
+				    WHERE a.prod_subcateg_id = _psid) THEN
+			BEGIN
+					RAISE NOTICE 'There are products under this category! Delete them first.';
+			END;
+		ELSE
+			BEGIN 
+				DELETE FROM product_sub_category
+				WHERE prod_subcateg_id = _psid;
+			END;
+		END IF;
+	END IF;
+END
+
+$$;
+
+
+ALTER PROCEDURE public.spprodsubcateginsertupdatedelete(_ser integer, _pcid integer, _name character varying, _desc text, _psid integer) OWNER TO postgres;
+
+--
+-- TOC entry 276 (class 1255 OID 16781)
+-- Name: spprodtypeinsertupdatedelete(integer, integer, character varying, text); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spprodtypeinsertupdatedelete(_ser integer, _categoryid integer, _name character varying, _desc text)
+    LANGUAGE plpgsql
+    AS $$
+
+ 
+
+    BEGIN
+        IF _ser=1 THEN
+            INSERT INTO product_sub_category (prod_category_id,prod_name,prod_desc)
+            VALUES (_categoryid, _name, _desc);
+            
+        ELSEIF _ser= 2 THEN
+            UPDATE product_sub_category
+            SET prod_name=_name,
+                prod_desc=_desc
+            WHERE prod_subcateg_id = _subcateg_id;
+        END IF;
+    END
+
+ 
+
+$$;
+
+
+ALTER PROCEDURE public.spprodtypeinsertupdatedelete(_ser integer, _categoryid integer, _name character varying, _desc text) OWNER TO postgres;
+
+--
+-- TOC entry 260 (class 1255 OID 16782)
+-- Name: spproductcategoryinsertupdatedelete(integer, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spproductcategoryinsertupdatedelete(_ser integer, _categoryname character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+	BEGIN
+	
+		IF _ser =1 THEN
+			
+			INSERT INTO product_category (prod_category)
+			VALUES(_categoryName);
+		END IF;
+	
+	END
+
+$$;
+
+
+ALTER PROCEDURE public.spproductcategoryinsertupdatedelete(_ser integer, _categoryname character varying) OWNER TO postgres;
+
+--
+-- TOC entry 281 (class 1255 OID 33323)
+-- Name: spproductdetails_add(text); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spproductdetails_add(_prod_details text)
+    LANGUAGE plpgsql
+    AS $_$
+	DECLARE 
+	_sql TEXT := 'INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty) VALUES';
+BEGIN
+	if _prod_details is null then
+		RAISE EXCEPTION 'Product details not added';
+	END IF;
+	_sql := _sql || _prod_details;
+	
+	EXECUTE _sql 
+	USING $1;
+	
+
+END
+$_$;
+
+
+ALTER PROCEDURE public.spproductdetails_add(_prod_details text) OWNER TO postgres;
+
+--
+-- TOC entry 285 (class 1255 OID 33369)
+-- Name: spproductdetails_delete(integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spproductdetails_delete(_pd_id integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	
+	DELETE 
+	FROM public.product_details
+	WHERE pd_id = _pd_id;
+	
+END
+$$;
+
+
+ALTER PROCEDURE public.spproductdetails_delete(_pd_id integer) OWNER TO postgres;
+
+--
+-- TOC entry 307 (class 1255 OID 42116)
+-- Name: spproductdetails_price_update(integer, numeric, numeric); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spproductdetails_price_update(_prod_id integer, _inrprice numeric, _usdprice numeric)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	UPDATE product_details
+		SET (prod_inr_price, prod_usd_price)
+		   =(_inrprice	   , _usdprice)
+	WHERE prod_id = _prod_id;
+END
+$$;
+
+
+ALTER PROCEDURE public.spproductdetails_price_update(_prod_id integer, _inrprice numeric, _usdprice numeric) OWNER TO postgres;
+
+--
+-- TOC entry 284 (class 1255 OID 33320)
+-- Name: spproductdetails_update(integer, numeric, numeric, integer, integer, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spproductdetails_update(_pd_id integer, _inrprice numeric, _usdprice numeric, _colour integer, _size integer, _qty integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	UPDATE product_details
+		SET (prod_inr_price, prod_usd_price, prod_colour, prod_size, prod_qty)
+		   =(_inrprice	   , _usdprice		, _colour	, _size		, _qty)
+	WHERE pd_id = _pd_id;
+END
+$$;
+
+
+ALTER PROCEDURE public.spproductdetails_update(_pd_id integer, _inrprice numeric, _usdprice numeric, _colour integer, _size integer, _qty integer) OWNER TO postgres;
+
+--
+-- TOC entry 304 (class 1255 OID 33873)
+-- Name: spproductinsertupdatedelete(integer, integer, character varying, text, boolean, boolean, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spproductinsertupdatedelete(_ser integer, _subcategid integer, _name character varying, _desc text, _latest boolean DEFAULT false, _trending boolean DEFAULT false, INOUT _prod_id integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+   CASE _ser    
+   WHEN 1 THEN  -- INSERT
+		 INSERT INTO product
+             (prod_subcateg_id, prod_name, prod_desc,prod_datetimeinserted)
+			  VALUES (_subcategid, _name, _desc,now() )
+			  RETURNING prod_id
+			  INTO _prod_id;  
+		 
+
+   WHEN 2 THEN  -- UPDATE
+		UPDATE product
+		SET		(prod_subcateg_id,prod_name, prod_desc)
+			=	(_subcategid,	_name	,	_desc)
+		WHERE prod_id = _prod_id;
+
+   WHEN 3 THEN  -- soft-DELETE
+      UPDATE product
+      SET    prod_datetill = now()
+      WHERE  prod_id = _prod_id;
+
+   WHEN 4 THEN  -- UPDATE latest and trending
+		UPDATE product
+		SET		(prod_latest, prod_trending)
+			=	(_latest,_trending)
+		WHERE prod_id = _prod_id;
+	 
+
+   ELSE
+      RAISE EXCEPTION 'Unexpected _ser value: %', _ser;
+   END CASE;
+END
+$$;
+
+
+ALTER PROCEDURE public.spproductinsertupdatedelete(_ser integer, _subcategid integer, _name character varying, _desc text, _latest boolean, _trending boolean, INOUT _prod_id integer) OWNER TO postgres;
+
+--
+-- TOC entry 298 (class 1255 OID 42105)
+-- Name: spresetpassword(character varying, text); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spresetpassword(_email character varying, _pwd text)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+
+	UPDATE users SET user_password = _pwd WHERE user_emailaddr = _email;
+
+END
+$$;
+
+
+ALTER PROCEDURE public.spresetpassword(_email character varying, _pwd text) OWNER TO postgres;
+
+--
+-- TOC entry 279 (class 1255 OID 16848)
+-- Name: spsizeinsertupdatedelete(integer, integer, character varying, character varying, integer); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spsizeinsertupdatedelete(_ser integer, _pcid integer, _code character varying, _value character varying, _sid integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	CASE _ser 
+	WHEN 1 THEN --- INSERT
+		INSERT INTO ref_size 
+			  (prod_category_id, size_code, size_value)
+		VALUES(_pcid		   ,_code	  , _value);
+	
+	WHEN 2 THEN --- UPDATE
+		UPDATE ref_size
+		SET (prod_category_id, size_code, size_value)
+		   =(_pcid			 , _code	, _value)
+		WHERE size_id = _sid;
+	
+	WHEN 3 THEN ---SOFT DELETE
+		UPDATE ref_size
+		SET    size_datetill = now()
+		WHERE  size_id= _sid;
+	
+	ELSE 
+		RAISE EXCEPTION 'Unexpected _ser value: %', _ser;
+	
+	END CASE;
+		
+END
+
+$$;
+
+
+ALTER PROCEDURE public.spsizeinsertupdatedelete(_ser integer, _pcid integer, _code character varying, _value character varying, _sid integer) OWNER TO postgres;
+
+--
+-- TOC entry 274 (class 1255 OID 16521)
+-- Name: spuserinsertupdate(integer, character varying, character varying, text, character, character varying, character varying, character, date, boolean, character varying); Type: PROCEDURE; Schema: public; Owner: postgres
+--
+
+CREATE PROCEDURE public.spuserinsertupdate(_ser integer, _email character varying, _mobileno character varying, _pwd text, _typecode character, _fname character varying DEFAULT NULL::character varying, _lname character varying DEFAULT NULL::character varying, _gender character DEFAULT NULL::bpchar, _dob date DEFAULT NULL::date, _verified boolean DEFAULT false, _discount character varying DEFAULT NULL::character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+	BEGIN
+	    -- Add user
+		IF _ser= 1 THEN
+			INSERT INTO users (user_emailaddr, user_mobileno, user_password, user_typecode, user_datetimecreated)
+			VALUES (_email, _mobileno, _pwd, _typecode ,now());
+			
+	    -- Update user
+		ELSEIF _ser= 2 THEN
+			UPDATE users
+			SET user_fname = _fname,
+				user_lname = _lname,
+				user_gender = _gender,
+				user_dob = _dob,
+				user_mobileno = _mobileno
+			WHERE user_emailaddr = _email;
+			
+		-- Update password
+		ELSEIF _ser= 3 THEN
+			UPDATE users
+			SET user_password = _pwd
+			WHERE user_emailaddr = _email;
+			
+		-- Update verified
+		ELSEIF _ser= 4 THEN
+			UPDATE users
+			SET user_verified = _verified
+			WHERE user_emailaddr = _email;
+			
+		-- Update discount
+		ELSEIF _ser= 5 THEN
+			UPDATE users
+			SET user_discount = _discount
+			WHERE user_emailaddr = _email;
+
+		END IF;
+				
+	END 
+$$;
+
+
+ALTER PROCEDURE public.spuserinsertupdate(_ser integer, _email character varying, _mobileno character varying, _pwd text, _typecode character, _fname character varying, _lname character varying, _gender character, _dob date, _verified boolean, _discount character varying) OWNER TO postgres;
+
+--
+-- TOC entry 259 (class 1255 OID 16805)
+-- Name: userpasswordselect(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.userpasswordselect(_userid integer) RETURNS TABLE(user_password text)
+    LANGUAGE plpgsql
+    AS $_$
+
+ 
+
+BEGIN
+    
+    RETURN QUERY 
+    select users.user_password
+    from users
+    where user_id =$1;
+
+ 
+
+END
+
+ 
+
+$_$;
+
+
+ALTER FUNCTION public.userpasswordselect(_userid integer) OWNER TO postgres;
+
+--
+-- TOC entry 289 (class 1255 OID 33536)
+-- Name: cart_new_id(integer); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.cart_new_id(_uid integer, OUT id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+	
+	BEGIN
+		
+		INSERT INTO store.order (user_id)
+		select u.user_id from public.users u 
+		where u.user_id = _uid
+		RETURNING store.order.order_id into id;
+		
+	END;
+$$;
+
+
+ALTER FUNCTION store.cart_new_id(_uid integer, OUT id integer) OWNER TO postgres;
+
+--
+-- TOC entry 288 (class 1255 OID 33535)
+-- Name: fn_cart_get_id(integer); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.fn_cart_get_id(_uid integer, OUT id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+
+	BEGIN
+		SELECT o.order_id INTO id
+		FROM store.order o
+		where o.user_id = _uid
+		AND o.order_paymentdate is null;
+		
+	END;
+
+$$;
+
+
+ALTER FUNCTION store.fn_cart_get_id(_uid integer, OUT id integer) OWNER TO postgres;
+
+--
+-- TOC entry 293 (class 1255 OID 33669)
+-- Name: fn_get_cart(integer); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.fn_get_cart(_userid integer, OUT status smallint, OUT js json) RETURNS record
+    LANGUAGE plpgsql
+    AS $$
+	BEGIN
+		js:= json_agg(row_to_json(r)) from (
+									select oe.order_id,a.orderdetail_id,a.orderdetail_price_id,
+											ps.prod_name as ps_name,
+											p.prod_name, p.prod_id,
+											pi.prod_img_path, pi.prod_img_name,
+											a.orderdetail_price, a.orderdetail_qty,
+											a.orderdetail_linetotal, pd.pd_id, pd.prod_qty
+									from store.orderdetails a
+									inner join product_details pd on pd.pd_id=a.prod_detail_id
+									inner join product p on p.prod_id=pd.prod_id
+									inner join product_sub_category ps on p.prod_subcateg_id = ps.prod_subcateg_id
+									inner join product_image pi on  p.prod_id = pi.prod_id
+									inner join store.order oe on a.order_id = oe.order_id
+									where oe.user_id = _userid and oe.order_paymentdate is null
+									and prod_img_path = (select prod_img_path from product_image where prod_id= p.prod_id LIMIT 1)
+									order by a.orderdetail_id ASC
+									) r;
+		status := 200;
+		
+		
+		
+
+	END;
+
+$$;
+
+
+ALTER FUNCTION store.fn_get_cart(_userid integer, OUT status smallint, OUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 291 (class 1255 OID 33530)
+-- Name: fn_order_get(integer); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.fn_order_get(_oid integer, OUT status smallint, OUT js json) RETURNS record
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+	
+	js := row_to_json(r) from (
+			select * from store.order_view WHERE order_id =_oid) r;
+	status := 200;
+	IF js IS NULL THEN
+		js:='{}';
+		status := 400;
+	END IF;
+
+END;
+
+$$;
+
+
+ALTER FUNCTION store.fn_order_get(_oid integer, OUT status smallint, OUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 287 (class 1255 OID 33751)
+-- Name: fncansendotp(numeric); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.fncansendotp(_userid numeric) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+	_failedcount NUMERIC;
+BEGIN
+   	select count(otp_id) into _failedcount from store.cod_otp
+	where user_id = _userid and
+	otp_status = 'FAILED' and
+	created_date > now() - INTERVAL '10 min';
+
+   IF _failedcount >= 10 THEN
+      RETURN FALSE;
+   ELSE
+      RETURN TRUE;
+   END IF;
+END
+$$;
+
+
+ALTER FUNCTION store.fncansendotp(_userid numeric) OWNER TO postgres;
+
+--
+-- TOC entry 312 (class 1255 OID 42134)
+-- Name: fncheckprice(numeric, integer, numeric, numeric); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.fncheckprice(_user_id numeric, _order_id integer, _webtotalvalue numeric, _coupon_id numeric DEFAULT NULL::numeric, OUT _finaltotalvalue numeric, OUT status boolean) RETURNS record
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+	_actualtotalvalue NUMERIC;
+	_calculatedvalue NUMERIC;
+	_userdiscount double precision;
+	_couponvalue double precision;
+    _f record;
+	_actual_price numeric;
+BEGIN
+
+---------update orderdetails table price with latest product ----------
+	for _f in select prod_detail_id, orderdetail_id, orderdetail_price_id
+		   from store.orderdetails where order_id = _order_id
+	loop 
+		if _f.orderdetail_price_id = 1 then
+			select prod_inr_price into _actual_price from public.product_details 
+			where pd_id = _f.prod_detail_id;
+		else 
+			select prod_usd_price into _actual_price from public.product_details 
+			where pd_id = _f.prod_detail_id;
+		end if;
+
+		update store.orderdetails as ab set orderdetail_price = _actual_price
+		where ab.orderdetail_id = _f.orderdetail_id;
+	end loop;
+
+-------------------calculating the total price-----------------
+	SELECT SUM(orderdetail_linetotal) INTO _actualtotalvalue
+	FROM store.orderdetails WHERE order_id= _order_id
+	GROUP BY order_id;
+
+	----------getting userdiscount------------
+	SELECT user_discount INTO _userdiscount
+	FROM public.users 
+	WHERE user_id = _user_id;
+	-----------getting coupon discount--------
+	SELECT coupon_value INTO _couponvalue
+	FROM public.coupon
+	WHERE coupon_id = _coupon_id AND coupon_datetill is null;
+
+	_calculatedvalue = _actualtotalvalue;
+
+	IF _userdiscount is not null THEN
+		_calculatedvalue = _calculatedvalue - (_calculatedvalue * (_userdiscount/100));
+	END IF;
+
+	IF _couponvalue is not null THEN
+		_calculatedvalue = _calculatedvalue - (_calculatedvalue * (_couponvalue/100));
+	END IF;
+
+	IF CEIL(_calculatedvalue::numeric) = CEIL(_webtotalvalue::numeric) THEN
+		STATUS = TRUE;
+		_finaltotalvalue = _webtotalvalue;
+	ELSE
+	----when web passed value is incorrect------------
+		_finaltotalvalue = _calculatedvalue;
+		status=FALSE;
+	END IF;
+
+END;
+
+$$;
+
+
+ALTER FUNCTION store.fncheckprice(_user_id numeric, _order_id integer, _webtotalvalue numeric, _coupon_id numeric, OUT _finaltotalvalue numeric, OUT status boolean) OWNER TO postgres;
+
+--
+-- TOC entry 297 (class 1255 OID 33839)
+-- Name: fnshipperselect(); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.fnshipperselect() RETURNS TABLE(shipr_id integer, shipr_name character varying, shipr_link character varying)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	RETURN QUERY
+		SELECT shipper_id,shipper_companyname, shipper_link FROM store.shippers;
+
+END
+
+$$;
+
+
+ALTER FUNCTION store.fnshipperselect() OWNER TO postgres;
+
+--
+-- TOC entry 311 (class 1255 OID 42128)
+-- Name: order_complete_paypal(json, integer, character varying, integer, boolean, integer, numeric, numeric, smallint, json); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.order_complete_paypal(_paypal_response json, _order_id integer, _order_number character varying, _address_id integer, _is_standard boolean, _quantity integer, _user_id numeric, _coupon_id numeric DEFAULT NULL::numeric, INOUT status smallint DEFAULT NULL::smallint, INOUT js json DEFAULT NULL::json)
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+	_paypal_id integer;
+	_payment_id integer;
+	_total_amount numeric; 
+	e1 text;
+	e2 text;
+	e3 text;
+	e4 text;
+	_userdiscount double precision;
+	_couponvalue double precision;
+	_shippingcost integer;
+	_r RECORD;
+
+BEGIN
+	-- Insert into paypalpayment table
+	INSERT INTO store.paypalpayment
+	(paypal_response) VALUES
+	(_paypal_response) 
+	RETURNING paypal_id INTO _paypal_id;
+	-- Insert into payment table
+	INSERT INTO store.payment
+	(payment_type_id, payment_mode_id) VALUES
+	(2,_paypal_id) RETURNING payment_id INTO _payment_id;
+	-- Getting total price
+	SELECT SUM(orderdetails_table.orderdetail_linetotal) INTO _total_amount
+	FROM store.orderdetails as orderdetails_table
+	WHERE orderdetails_table.order_id = _order_id;
+	--- Calculate discount and coupon
+	SELECT user_discount INTO _userdiscount
+	FROM public.users 
+	WHERE user_id = _user_id;
+
+	SELECT coupon_value INTO _couponvalue
+	FROM public.coupon
+	WHERE coupon_id = _coupon_id AND coupon_datetill is null;
+
+	IF _userdiscount is not null THEN
+		_total_amount = _total_amount - (_total_amount * (_userdiscount/100));
+	END IF;
+
+	IF _couponvalue is not null THEN
+		_total_amount = _total_amount - (_total_amount * (_couponvalue/100));
+	END IF;
+	
+	_total_amount = ROUND(_total_amount::numeric,2);
+
+	--- adding shipping cost
+	
+	IF _is_standard THEN
+		_shippingcost = (10 + ((_quantity-1)*6));
+	ELSE
+		_shippingcost = (18 + ((_quantity-1)*10));
+	END IF;
+
+	_total_amount = _total_amount + _shippingcost;
+
+	-- Update order table 
+	UPDATE store.order as order_table SET 
+	payment_id = _payment_id,
+	order_paymentdate = now(),
+	order_number = _order_number,
+	order_totalprice = _total_amount,
+	address_id = _address_id,
+	standard_shipping = _is_standard
+	WHERE order_table.order_id = _order_id;
+	------- deduct product counts
+	for _r in SELECT orderdetail_id, order_id, orderdetail_qty, prod_detail_id 
+	from store.orderdetails WHERE order_id = _order_id
+		loop			
+			UPDATE public.product_details as pd SET prod_qty = prod_qty - _r.orderdetail_qty
+				WHERE pd.pd_id = _r.prod_detail_id;
+		end loop;
+	
+	-- Set success response
+	status := 200;
+	js := json_build_object('message','success');
+	
+EXCEPTION 
+	when others then get stacked diagnostics e1=returned_sqlstate, e2=message_text, e3=pg_exception_detail, e4=pg_exception_context;
+	js := json_build_object('code',e1,'message',e2,'detail',e3,'context',e4);
+	status := 500;
+END;
+
+$$;
+
+
+ALTER PROCEDURE store.order_complete_paypal(_paypal_response json, _order_id integer, _order_number character varying, _address_id integer, _is_standard boolean, _quantity integer, _user_id numeric, _coupon_id numeric, INOUT status smallint, INOUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 315 (class 1255 OID 42154)
+-- Name: order_complete_razorpay(character varying, character varying, character varying, integer, character varying, integer, numeric, numeric, smallint, json); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.order_complete_razorpay(_razorpay_payment_id character varying, _razorpay_order_id character varying, _razorpay_signature character varying, _order_id integer, _order_number character varying, _address_id integer, _user_id numeric, _coupon_id numeric DEFAULT NULL::numeric, INOUT status smallint DEFAULT NULL::smallint, INOUT js json DEFAULT NULL::json)
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+	_razorpay_id integer;
+	_payment_id integer;
+	_total_amount numeric; 
+	e1 text;
+	e2 text;
+	e3 text;
+	e4 text;
+	_userdiscount double precision;
+	_couponvalue double precision;
+	_r RECORD;
+
+BEGIN
+	-- Insert into razorpaypayment table
+	INSERT INTO store.razorpaypayment
+	(razorpay_payment_id, razorpay_order_id, razorpay_signature) VALUES
+	(_razorpay_payment_id, _razorpay_order_id,_razorpay_signature) 
+	RETURNING raz_pay_id INTO _razorpay_id;
+	-- Insert into payment table
+	INSERT INTO store.payment
+	(payment_type_id, payment_mode_id) VALUES
+	(3,_razorpay_id) RETURNING payment_id INTO _payment_id;
+	-- Getting total price
+	SELECT SUM(orderdetails_table.orderdetail_linetotal) INTO _total_amount
+	FROM store.orderdetails as orderdetails_table
+	WHERE orderdetails_table.order_id = _order_id;
+	--- calculating user and coupon discount
+	SELECT user_discount INTO _userdiscount
+	FROM public.users 
+	WHERE user_id = _user_id;
+	
+	SELECT coupon_value INTO _couponvalue
+	FROM public.coupon
+	WHERE coupon_id = _coupon_id AND coupon_datetill is null;
+	
+	IF _userdiscount is not null THEN
+		_total_amount = _total_amount - (_total_amount * (_userdiscount/100));
+	END IF;
+
+	IF _couponvalue is not null THEN
+		_total_amount = _total_amount - (_total_amount * (_couponvalue/100));
+	END IF;
+	
+	_total_amount = CEIL(_total_amount::numeric);
+
+	-- Update order table 
+	UPDATE store.order as order_table SET 
+	payment_id = _payment_id,
+	order_paymentdate = now(),
+	order_number = _order_number,
+	order_totalprice = _total_amount,
+	address_id = _address_id
+	WHERE order_table.order_id = _order_id;
+------- deduct product counts
+	for _r in SELECT orderdetail_id, order_id, orderdetail_qty, prod_detail_id 
+	from store.orderdetails WHERE order_id = _order_id
+		loop			
+			UPDATE public.product_details as pd SET prod_qty = prod_qty - _r.orderdetail_qty
+				WHERE pd.pd_id = _r.prod_detail_id;
+		end loop;
+	
+	-- Set success response
+	status := 200;
+	js := json_build_object('message','success');
+	
+EXCEPTION 
+	when others then get stacked diagnostics e1=returned_sqlstate, e2=message_text, e3=pg_exception_detail, e4=pg_exception_context;
+	js := json_build_object('code',e1,'message',e2,'detail',e3,'context',e4);
+	status := 500;
+END;
+
+$$;
+
+
+ALTER PROCEDURE store.order_complete_razorpay(_razorpay_payment_id character varying, _razorpay_order_id character varying, _razorpay_signature character varying, _order_id integer, _order_number character varying, _address_id integer, _user_id numeric, _coupon_id numeric, INOUT status smallint, INOUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 295 (class 1255 OID 33671)
+-- Name: order_item_add(integer, integer, integer, integer); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.order_item_add(_uid integer, _prid integer, _qty integer, _pdid integer, OUT status smallint, OUT js json) RETURNS record
+    LANGUAGE plpgsql
+    AS $$
+	DECLARE
+		cart_id INTEGER;
+		line_id INTEGER;
+		prod_price NUMERIC;
+		client_price NUMERIC;
+		price_inr NUMERIC;
+		price_usd NUMERIC;
+		e6 text; e7 text; e8 text; e9 text;
+	BEGIN
+		-- creating cartid
+		SELECT id into cart_id FROM store.fn_cart_get_id(_uid);
+		IF cart_id is null THEN
+			SELECT id into cart_id FROM store.cart_new_id(_uid);
+		END IF;
+		-- selecting current price
+		SELECT prod_inr_price, prod_usd_price into price_inr,price_usd
+		FROM product_details where pd_id = _pdid;
+		-- checking for product already in cart
+		SELECT orderdetail_id into line_id 
+		FROM store.orderdetails WHERE order_id =cart_id
+		AND prod_detail_id = _pdid;
+		-- setting price INR or USD based on clien
+		IF _prid = 1 THEN
+			client_price = price_inr;
+		ELSE
+			client_price = price_usd;
+		END IF;
+		IF line_id IS NULL THEN
+			INSERT INTO store.orderdetails (order_id, prod_detail_id, orderdetail_qty, orderdetail_price, orderdetail_price_id)
+						VALUES			    (cart_id, _pdid	 , _qty			  , client_price			 , _prid)
+						RETURNING orderdetail_id into line_id;
+		ELSE
+			--This will check if the existing price in orderdetails is same or not. If not it will update the price as well.
+			SELECT orderdetail_price into prod_price
+			FROM store.orderdetails WHERE orderdetail_id = line_id;
+			IF prod_price = client_price THEN
+				UPDATE store.orderdetails 
+				SET orderdetail_qty = orderdetail_qty + _qty
+				WHERE orderdetail_id = line_id;
+			ELSE
+				RAISE INFO 'Price of one of the items in your cart has been updated';
+				UPDATE store.orderdetails 
+				SET  orderdetail_qty = orderdetail_qty + _qty
+					,orderdetail_price = client_price
+				WHERE orderdetail_id = line_id;
+			END IF;
+		END IF;
+		status := 200;
+		js := row_to_json(finalorder.*) 
+		from (
+			  select od.*,o.order_id from 
+			  store.orderdetails as od 
+			  inner join store.order as o on o.order_id = od.order_id
+			  where orderdetail_id = line_id
+			) finalorder;
+	
+	EXCEPTION 
+		
+		when others then get stacked diagnostics e6=returned_sqlstate, e7=message_text, e8=pg_exception_detail, e9=pg_exception_context;
+		js := json_build_object('code',e6,'message',e7,'detail',e8,'context',e9);
+		status := 500;
+				
+	END;
+$$;
+
+
+ALTER FUNCTION store.order_item_add(_uid integer, _prid integer, _qty integer, _pdid integer, OUT status smallint, OUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 286 (class 1255 OID 33593)
+-- Name: order_item_delete(integer, smallint, json); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.order_item_delete(_odid integer, INOUT status smallint DEFAULT NULL::smallint, INOUT js json DEFAULT NULL::json)
+    LANGUAGE plpgsql
+    AS $$
+
+	declare
+	e6 text; e7 text; e8 text; e9 text;
+	BEGIN
+		
+		js := row_to_json(r.*) from store.orderdetails r where orderdetail_id = _odid;
+		status := 200;
+		if js is null then
+			status := 404;
+			js := '{}';
+		else
+			delete from store.orderdetails where orderdetail_id = _odid;
+		end if;
+exception
+	when others then get stacked diagnostics e6=returned_sqlstate, e7=message_text, e8=pg_exception_detail, e9=pg_exception_context;
+	js := json_build_object('code',e6,'message',e7,'detail',e8,'context',e9);
+	status := 500;
+	
+	END
+$$;
+
+
+ALTER PROCEDURE store.order_item_delete(_odid integer, INOUT status smallint, INOUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 292 (class 1255 OID 33611)
+-- Name: order_item_update(integer, integer, smallint, json); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.order_item_update(_odid integer, _qty integer, INOUT status smallint DEFAULT NULL::smallint, INOUT js json DEFAULT NULL::json)
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE e6 text; e7 text; e8 text; e9 text;
+
+BEGIN
+	
+	PERFORM 1 FROM store.orderdetails where orderdetail_id=_odid;
+	IF NOT FOUND THEN
+		status := 404;
+		js := '{}';
+	
+	ELSEIF _qty > 0 THEN
+		UPDATE store.orderdetails
+		SET orderdetail_qty = _qty
+		WHERE orderdetail_id = _odid;
+		status := 200;
+		js := row_to_json(r.*) from store.orderdetails r where orderdetail_id=_odid;
+	
+	ELSE
+		DELETE FROM store.orderdetails where orderdetail_id = _odid;
+		status := 200;
+		js := '{}';
+	END IF;
+EXCEPTION
+	when others then get stacked diagnostics e6=returned_sqlstate, e7=message_text, e8=pg_exception_detail, e9=pg_exception_context;
+	js := json_build_object('code',e6,'message',e7,'detail',e8,'context',e9);
+	status := 500;
+		
+END;
+
+$$;
+
+
+ALTER PROCEDURE store.order_item_update(_odid integer, _qty integer, INOUT status smallint, INOUT js json) OWNER TO postgres;
+
+--
+-- TOC entry 316 (class 1255 OID 42155)
+-- Name: spcodotp(integer, integer, integer, character varying, integer, character varying, numeric); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.spcodotp(_ser_id integer, _user_id integer, _order_id integer DEFAULT NULL::integer, _order_number character varying DEFAULT NULL::character varying, _address_id integer DEFAULT NULL::integer, _otp_status character varying DEFAULT NULL::character varying, _coupon_id numeric DEFAULT NULL::numeric)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+	_otp_id integer;
+	_payment_id integer;
+	_total_amount numeric; 
+	_r RECORD;
+	_userdiscount double precision;
+	_couponvalue double precision;
+BEGIN 
+	IF _ser_id = 1 THEN
+		UPDATE store.cod_otp SET otp_status = 'FAILED' WHERE user_id = _user_id and otp_status IS NULL;
+		INSERT INTO store.cod_otp (user_id, created_date) values (_user_id, now());
+	ELSIF _ser_id = 2 THEN
+		UPDATE store.cod_otp SET otp_status = 'SUCCESS' 
+		WHERE user_id = _user_id and otp_status IS NULL RETURNING otp_id INTO _otp_id;
+		-- Insert into payment table
+		INSERT INTO store.payment
+		(payment_type_id, payment_mode_id) VALUES
+		(1,_otp_id) RETURNING payment_id INTO _payment_id;
+		-- Getting total price
+		SELECT SUM(orderdetails_table.orderdetail_linetotal) INTO _total_amount
+		FROM store.orderdetails as orderdetails_table
+		WHERE orderdetails_table.order_id = _order_id;
+		--- calculating user and coupon discount
+		SELECT user_discount INTO _userdiscount
+		FROM public.users 
+		WHERE user_id = _user_id;
+
+		SELECT coupon_value INTO _couponvalue
+		FROM public.coupon
+		WHERE coupon_id = _coupon_id AND coupon_datetill is null;
+
+		IF _userdiscount is not null THEN
+			_total_amount = _total_amount - (_total_amount * (_userdiscount/100));
+		END IF;
+
+		IF _couponvalue is not null THEN
+			_total_amount = _total_amount - (_total_amount * (_couponvalue/100));
+		END IF;
+
+		_total_amount = CEIL(_total_amount::numeric);
+		
+		-- Update order table 
+		UPDATE store.order as order_table SET 
+		payment_id = _payment_id,
+		order_paymentdate = now(),
+		order_number = _order_number,
+		order_totalprice = _total_amount,
+		address_id = _address_id
+		WHERE order_table.order_id = _order_id;
+		END IF;
+------- deduct product counts
+	for _r in SELECT orderdetail_id, order_id, orderdetail_qty, prod_detail_id 
+	from store.orderdetails WHERE order_id = _order_id
+		loop			
+			UPDATE public.product_details as pd SET prod_qty = prod_qty - _r.orderdetail_qty
+				WHERE pd.pd_id = _r.prod_detail_id;
+		end loop;
+
+END
+$$;
+
+
+ALTER PROCEDURE store.spcodotp(_ser_id integer, _user_id integer, _order_id integer, _order_number character varying, _address_id integer, _otp_status character varying, _coupon_id numeric) OWNER TO postgres;
+
+--
+-- TOC entry 305 (class 1255 OID 33921)
+-- Name: spreturnupdate(integer, integer, character varying, character varying); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.spreturnupdate(_ser integer, _orderdetailid integer, _returnstatus character varying DEFAULT NULL::character varying, _paymentstatus character varying DEFAULT NULL::character varying)
+    LANGUAGE plpgsql
+    AS $$
+
+	DECLARE
+	_deliverydate TIMESTAMP;
+	_returnprodqty INTEGER;
+	_pdid INTEGER;
+	_addproductback BOOLEAN;
+
+	BEGIN
+
+			SELECT s.shipment_deliverydate into _deliverydate FROM store.orderdetails od 
+			INNER JOIN store.shipments s on od.shipment_id = s.shipment_id
+			where od.orderdetail_id=_orderdetailid;
+
+			IF DATE_PART('day',now()::TIMESTAMP - _deliverydate::timestamp) > 30 THEN
+				RAISE EXCEPTION 'This order cannot be returned since it is older than 30 days!';
+			END IF;
+
+			CASE _ser
+			WHEN 1 THEN ---- Customer applies for return
+				UPDATE store.orderdetails SET orderdetail_return = 'In Progress'
+				WHERE orderdetail_id=_orderdetailid;
+
+			WHEN 2 THEN --- ADMIN updates
+				UPDATE store.orderdetails SET orderdetail_return = _returnstatus, orderdetail_returnpayment = _paymentstatus
+				WHERE orderdetail_id=_orderdetailid 
+				RETURNING is_product_added_back, orderdetail_qty, prod_detail_id 
+				INTO _addproductback, _returnprodqty, _pdid;
+
+				----- If Accepted, the returned items will be added into the total qty----
+				if (_returnstatus = 'Accepted' OR _paymentstatus = 'Yes') AND NOT _addproductback THEN
+-- 					SELECT orderdetail_qty, prod_detail_id INTO _returnprodqty, _pdid FROM store.orderdetails
+-- 					where orderdetail_id = _orderdetailid;
+
+					UPDATE store.orderdetails SET is_product_added_back = TRUE
+					WHERE orderdetail_id=_orderdetailid;
+
+					UPDATE public.product_details set prod_qty = prod_qty + _returnprodqty
+					WHERE pd_id = _pdid;
+
+				END IF;
+
+			ELSE
+     			 RAISE EXCEPTION 'Unexpected _ser value: %', _ser;
+  			 END CASE;
+
+	END;
+$$;
+
+
+ALTER PROCEDURE store.spreturnupdate(_ser integer, _orderdetailid integer, _returnstatus character varying, _paymentstatus character varying) OWNER TO postgres;
+
+--
+-- TOC entry 300 (class 1255 OID 33861)
+-- Name: spshipmentsinsertupdatedelete(integer, character varying, integer, integer, timestamp without time zone, timestamp without time zone, integer); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.spshipmentsinsertupdatedelete(_ser integer, _shipmenttracknumber character varying, _shipperid integer, _orderdetailid integer, _shipmentdate timestamp without time zone DEFAULT NULL::timestamp without time zone, _shipmentdeliverydate timestamp without time zone DEFAULT NULL::timestamp without time zone, _shipmentid integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE _shipment_Id numeric;
+BEGIN
+
+	IF _ser=1 THEN -- INSERT
+
+		INSERT INTO store.shipments (shipper_ID,shipment_trackingnumber,shipment_date,shipment_deliverydate)
+		VALUES (_shipperid,  _shipmenttracknumber,_shipmentdate,_shipmentdeliverydate) 
+		RETURNING shipment_id INTO _shipment_Id;
+
+		UPDATE store.orderdetails SET shipment_id = _shipment_Id
+		WHERE orderdetail_id = _orderdetailid;
+
+	ELSEIF _ser=2 THEN --UPDATE
+
+		UPDATE store.shipments SET
+		shipper_ID = _shipperid,
+		shipment_trackingnumber = _shipmenttracknumber,
+		shipment_date=_shipmentdate,
+		shipment_deliverydate=_shipmentdeliverydate
+		where shipment_id = _shipmentid;
+
+	ELSEIF _ser=3 THEN --DELETE
+		DELETE FROM store.shipments WHERE shipment_id = _shipmentid;
+
+	END IF;
+END
+
+$$;
+
+
+ALTER PROCEDURE store.spshipmentsinsertupdatedelete(_ser integer, _shipmenttracknumber character varying, _shipperid integer, _orderdetailid integer, _shipmentdate timestamp without time zone, _shipmentdeliverydate timestamp without time zone, _shipmentid integer) OWNER TO postgres;
+
+--
+-- TOC entry 296 (class 1255 OID 33838)
+-- Name: spshipperinsertupdatedelete(integer, character varying, text, integer); Type: PROCEDURE; Schema: store; Owner: postgres
+--
+
+CREATE PROCEDURE store.spshipperinsertupdatedelete(_ser integer, _shippername character varying, _shipperlink text, _shipperid integer DEFAULT NULL::integer)
+    LANGUAGE plpgsql
+    AS $$
+
+BEGIN
+
+IF _ser=1 THEN -- INSERT
+	INSERT INTO store.shippers (shipper_companyname, shipper_link)
+	VALUES (_shippername,  _shipperlink);
+
+ELSEIF _ser=2 THEN --UPDATE
+
+	UPDATE store.shippers SET
+	shipper_companyname = _shippername,
+	shipper_link = _shipperlink
+	where shipper_id = _shipperid;
+
+ELSEIF _ser=3 THEN --DELETE
+	IF EXISTS (SELECT 1 FROM store.shippers a
+   		INNER JOIN store.shipments b on a.shipper_id = b.shipper_id
+   		WHERE a.shipper_id = _shipperid) THEN
+		BEGIN
+			RAISE NOTICE 'There are shipments under this shipper! Delete them first.';
+	END;
+	ELSE
+	BEGIN
+		DELETE FROM store.shippers
+		WHERE shipper_id = _shipperid;
+	END;
+	END IF;
+END IF;
+END
+
+$$;
+
+
+ALTER PROCEDURE store.spshipperinsertupdatedelete(_ser integer, _shippername character varying, _shipperlink text, _shipperid integer) OWNER TO postgres;
+
+--
+-- TOC entry 313 (class 1255 OID 42151)
+-- Name: updatecartquantity(text); Type: FUNCTION; Schema: store; Owner: postgres
+--
+
+CREATE FUNCTION store.updatecartquantity(_order_detail_ids text DEFAULT NULL::text, OUT status boolean) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+	 _f record;
+	 _available_qty integer;
+BEGIN
+	status = FALSE;
+	
+	for _f in select orderdetail_id, prod_detail_id, orderdetail_qty  
+			  from store.orderdetails 
+			  where orderdetail_id = ANY(string_to_array(_order_detail_ids, ',')::int[])
+	loop 
+		select prod_qty into _available_qty from product_details where pd_id = _f.prod_detail_id;
+		if _f.orderdetail_qty > _available_qty then
+			update store.orderdetails as od
+			set orderdetail_qty = _available_qty
+			where od.orderdetail_id = _f.orderdetail_id;
+			status = TRUE;
+		end if;
+	end loop;
+END
+
+$$;
+
+
+ALTER FUNCTION store.updatecartquantity(_order_detail_ids text, OUT status boolean) OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 247 (class 1259 OID 33738)
+-- Name: _actualtotalvalue; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public._actualtotalvalue (
+    sum numeric
+);
+
+
+ALTER TABLE public._actualtotalvalue OWNER TO postgres;
+
+--
+-- TOC entry 248 (class 1259 OID 33746)
+-- Name: _failedcount; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public._failedcount (
+    count bigint
+);
+
+
+ALTER TABLE public._failedcount OWNER TO postgres;
+
+--
+-- TOC entry 242 (class 1259 OID 33649)
+-- Name: _total_amount; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public._total_amount (
+    sum numeric
+);
+
+
+ALTER TABLE public._total_amount OWNER TO postgres;
+
+--
+-- TOC entry 221 (class 1259 OID 16855)
+-- Name: coupon; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.coupon (
+    coupon_id integer NOT NULL,
+    coupon_code character varying(20) NOT NULL,
+    coupon_value character varying(20) NOT NULL,
+    coupon_datetill timestamp without time zone
+);
+
+
+ALTER TABLE public.coupon OWNER TO postgres;
+
+--
+-- TOC entry 220 (class 1259 OID 16853)
+-- Name: coupon_coupon_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.coupon ALTER COLUMN coupon_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.coupon_coupon_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 217 (class 1259 OID 16767)
+-- Name: price_history; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.price_history (
+    price_id integer NOT NULL,
+    prod_id integer NOT NULL,
+    price_old numeric NOT NULL,
+    price_datetill timestamp without time zone
+);
+
+
+ALTER TABLE public.price_history OWNER TO postgres;
+
+--
+-- TOC entry 216 (class 1259 OID 16765)
+-- Name: price_history_price_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.price_history ALTER COLUMN price_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.price_history_price_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 227 (class 1259 OID 33280)
+-- Name: product; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.product (
+    prod_id integer NOT NULL,
+    prod_subcateg_id integer,
+    prod_name character varying(50),
+    prod_desc text,
+    prod_datetill timestamp without time zone,
+    prod_trending boolean DEFAULT false,
+    prod_latest boolean DEFAULT false,
+    prod_datetimeinserted timestamp without time zone
+);
+
+
+ALTER TABLE public.product OWNER TO postgres;
+
+--
+-- TOC entry 213 (class 1259 OID 16684)
+-- Name: product_category; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.product_category (
+    prod_category_id integer NOT NULL,
+    prod_category character varying(50),
+    prod_category_datetill timestamp without time zone
+);
+
+
+ALTER TABLE public.product_category OWNER TO postgres;
+
+--
+-- TOC entry 212 (class 1259 OID 16682)
+-- Name: product_category_prod_category_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.product_category ALTER COLUMN prod_category_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.product_category_prod_category_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 229 (class 1259 OID 33295)
+-- Name: product_details; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.product_details (
+    pd_id integer NOT NULL,
+    prod_id integer,
+    prod_inr_price numeric,
+    prod_usd_price numeric,
+    prod_colour integer,
+    prod_size integer,
+    prod_qty integer
+);
+
+
+ALTER TABLE public.product_details OWNER TO postgres;
+
+--
+-- TOC entry 228 (class 1259 OID 33293)
+-- Name: product_details_pd_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.product_details ALTER COLUMN pd_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.product_details_pd_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 223 (class 1259 OID 25045)
+-- Name: product_image; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.product_image (
+    prod_img_id integer NOT NULL,
+    prod_id integer,
+    prod_img_name character varying(50) NOT NULL,
+    prod_img_path text
+);
+
+
+ALTER TABLE public.product_image OWNER TO postgres;
+
+--
+-- TOC entry 222 (class 1259 OID 25043)
+-- Name: product_image_prod_img_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.product_image ALTER COLUMN prod_img_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.product_image_prod_img_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 226 (class 1259 OID 33278)
+-- Name: product_prod_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.product ALTER COLUMN prod_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.product_prod_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 215 (class 1259 OID 16691)
+-- Name: product_sub_category; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.product_sub_category (
+    prod_subcateg_id integer NOT NULL,
+    prod_category_id integer NOT NULL,
+    prod_name character varying(50) NOT NULL,
+    prod_desc text
+);
+
+
+ALTER TABLE public.product_sub_category OWNER TO postgres;
+
+--
+-- TOC entry 214 (class 1259 OID 16689)
+-- Name: product_sub_category_prod_subcateg_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.product_sub_category ALTER COLUMN prod_subcateg_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.product_sub_category_prod_subcateg_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 208 (class 1259 OID 16614)
+-- Name: ref_address_type; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ref_address_type (
+    addr_type_code character(1) NOT NULL,
+    addr_type_description character varying(10) NOT NULL
+);
+
+
+ALTER TABLE public.ref_address_type OWNER TO postgres;
+
+--
+-- TOC entry 225 (class 1259 OID 25209)
+-- Name: ref_colour; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ref_colour (
+    colour_code character varying(20) NOT NULL,
+    colour_value character varying(50) NOT NULL,
+    colour_id integer NOT NULL,
+    colour_datetill timestamp without time zone
+);
+
+
+ALTER TABLE public.ref_colour OWNER TO postgres;
+
+--
+-- TOC entry 224 (class 1259 OID 25207)
+-- Name: ref_colour_colour_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.ref_colour ALTER COLUMN colour_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.ref_colour_colour_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 219 (class 1259 OID 16810)
+-- Name: ref_size; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ref_size (
+    size_code character varying(20) NOT NULL,
+    size_value character varying(50) NOT NULL,
+    prod_category_id integer NOT NULL,
+    size_id integer NOT NULL,
+    size_datetill timestamp without time zone
+);
+
+
+ALTER TABLE public.ref_size OWNER TO postgres;
+
+--
+-- TOC entry 218 (class 1259 OID 16808)
+-- Name: ref_size_size_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.ref_size ALTER COLUMN size_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.ref_size_size_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 205 (class 1259 OID 16497)
+-- Name: ref_usr_type; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ref_usr_type (
+    usr_typecode character(1) NOT NULL,
+    usr_typedesc character varying(20) NOT NULL
+);
+
+
+ALTER TABLE public.ref_usr_type OWNER TO postgres;
+
+--
+-- TOC entry 236 (class 1259 OID 33550)
+-- Name: temptable; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.temptable (
+    prod_img_path text,
+    prod_img_name character varying(50)
+);
+
+
+ALTER TABLE public.temptable OWNER TO postgres;
+
+--
+-- TOC entry 237 (class 1259 OID 33556)
+-- Name: temptables; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.temptables (
+    prod_img_path text,
+    prod_img_name character varying(50),
+    pd_id integer
+);
+
+
+ALTER TABLE public.temptables OWNER TO postgres;
+
+--
+-- TOC entry 211 (class 1259 OID 16623)
+-- Name: user_address; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_address (
+    addr_id integer NOT NULL,
+    user_id integer NOT NULL,
+    addr_serial smallint NOT NULL,
+    addr_type_code character(1) NOT NULL,
+    addr_line1 character varying(40) NOT NULL,
+    addr_line2 character varying(40) DEFAULT NULL::character varying,
+    addr_line3 character varying(40) DEFAULT NULL::character varying,
+    addr_city character varying(30) NOT NULL,
+    addr_state character varying(30) NOT NULL,
+    addr_pincode character varying(10) NOT NULL,
+    addr_country character varying(30) NOT NULL,
+    addr_datetimecreated timestamp without time zone,
+    addr_datetill timestamp without time zone
+);
+
+
+ALTER TABLE public.user_address OWNER TO postgres;
+
+--
+-- TOC entry 207 (class 1259 OID 16538)
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    user_id integer NOT NULL,
+    user_fname character varying(50),
+    user_lname character varying(50),
+    user_gender character(1),
+    user_dob date,
+    user_emailaddr character varying(50) NOT NULL,
+    user_mobileno character varying(16) NOT NULL,
+    user_password text NOT NULL,
+    user_typecode character(1),
+    user_verified boolean,
+    user_discount character varying(10),
+    user_datetimecreated time without time zone,
+    CONSTRAINT usr_dob_check CHECK ((user_dob > '1900-01-01'::date))
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
+-- TOC entry 206 (class 1259 OID 16536)
+-- Name: users_usr_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.users_usr_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.users_usr_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3122 (class 0 OID 0)
+-- Dependencies: 206
+-- Name: users_usr_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.users_usr_id_seq OWNED BY public.users.user_id;
+
+
+--
+-- TOC entry 209 (class 1259 OID 16619)
+-- Name: usr_address_addr_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.usr_address_addr_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.usr_address_addr_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3123 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: usr_address_addr_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.usr_address_addr_id_seq OWNED BY public.user_address.addr_id;
+
+
+--
+-- TOC entry 210 (class 1259 OID 16621)
+-- Name: usr_address_user_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.usr_address_user_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.usr_address_user_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3124 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: usr_address_user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.usr_address_user_id_seq OWNED BY public.user_address.user_id;
+
+
+--
+-- TOC entry 253 (class 1259 OID 33886)
+-- Name: vw_product_counts; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.vw_product_counts AS
+ SELECT p.prod_subcateg_id AS prod_subcategory_id,
+    b.prod_name AS prod_subcategroy_name,
+    a.prod_colour AS colour_id,
+    rc.colour_value AS colour_name,
+    a.prod_size AS size_id,
+    rs.size_value AS size_name,
+    count(*) AS prod_count
+   FROM ((((public.product_details a
+     JOIN public.product p ON ((a.prod_id = p.prod_id)))
+     JOIN public.ref_colour rc ON ((a.prod_colour = rc.colour_id)))
+     JOIN public.ref_size rs ON ((a.prod_size = rs.size_id)))
+     JOIN public.product_sub_category b ON ((p.prod_subcateg_id = b.prod_subcateg_id)))
+  WHERE (p.prod_datetill IS NULL)
+  GROUP BY p.prod_subcateg_id, b.prod_name, a.prod_colour, rc.colour_value, a.prod_size, rs.size_value;
+
+
+ALTER TABLE public.vw_product_counts OWNER TO postgres;
+
+--
+-- TOC entry 246 (class 1259 OID 33716)
+-- Name: cod_otp; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.cod_otp (
+    otp_id integer NOT NULL,
+    user_id integer NOT NULL,
+    otp_status character varying(100),
+    created_date timestamp without time zone
+);
+
+
+ALTER TABLE store.cod_otp OWNER TO postgres;
+
+--
+-- TOC entry 245 (class 1259 OID 33714)
+-- Name: cod_otp_otp_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+CREATE SEQUENCE store.cod_otp_otp_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE store.cod_otp_otp_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3125 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: cod_otp_otp_id_seq; Type: SEQUENCE OWNED BY; Schema: store; Owner: postgres
+--
+
+ALTER SEQUENCE store.cod_otp_otp_id_seq OWNED BY store.cod_otp.otp_id;
+
+
+--
+-- TOC entry 233 (class 1259 OID 33436)
+-- Name: order; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store."order" (
+    order_id integer NOT NULL,
+    user_id integer NOT NULL,
+    address_id integer,
+    order_date timestamp without time zone,
+    order_totalprice numeric,
+    order_paymentdate timestamp without time zone,
+    payment_id integer,
+    order_number character varying,
+    coupon_id integer,
+    user_discount character varying,
+    standard_shipping boolean
+);
+
+
+ALTER TABLE store."order" OWNER TO postgres;
+
+--
+-- TOC entry 235 (class 1259 OID 33502)
+-- Name: orderdetails; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.orderdetails (
+    orderdetail_id integer NOT NULL,
+    order_id integer,
+    prod_detail_id integer,
+    orderdetail_qty integer,
+    orderdetail_price numeric,
+    orderdetail_price_id integer,
+    orderdetail_linetotal numeric GENERATED ALWAYS AS (((orderdetail_qty)::numeric * orderdetail_price)) STORED,
+    shipment_id integer,
+    is_product_added_back boolean DEFAULT false,
+    orderdetail_return character varying(20),
+    orderdetail_returnpayment character varying(10)
+);
+
+
+ALTER TABLE store.orderdetails OWNER TO postgres;
+
+--
+-- TOC entry 231 (class 1259 OID 33428)
+-- Name: payment; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.payment (
+    payment_id integer NOT NULL,
+    payment_type_id integer,
+    payment_mode_id integer
+);
+
+
+ALTER TABLE store.payment OWNER TO postgres;
+
+--
+-- TOC entry 241 (class 1259 OID 33634)
+-- Name: paymenttype; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.paymenttype (
+    id integer NOT NULL,
+    payment_type_name character varying(100) NOT NULL
+);
+
+
+ALTER TABLE store.paymenttype OWNER TO postgres;
+
+--
+-- TOC entry 244 (class 1259 OID 33703)
+-- Name: paypalpayment; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.paypalpayment (
+    paypal_id integer NOT NULL,
+    paypal_response json,
+    create_date timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE store.paypalpayment OWNER TO postgres;
+
+--
+-- TOC entry 239 (class 1259 OID 33623)
+-- Name: razorpaypayment; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.razorpaypayment (
+    raz_pay_id integer NOT NULL,
+    razorpay_payment_id character varying,
+    razorpay_order_id character varying,
+    razorpay_signature character varying
+);
+
+
+ALTER TABLE store.razorpaypayment OWNER TO postgres;
+
+--
+-- TOC entry 252 (class 1259 OID 33842)
+-- Name: shipments; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.shipments (
+    shipment_id integer NOT NULL,
+    shipper_id integer,
+    shipment_date timestamp without time zone,
+    shipment_trackingnumber character varying(50),
+    shipment_deliverydate timestamp without time zone
+);
+
+
+ALTER TABLE store.shipments OWNER TO postgres;
+
+--
+-- TOC entry 255 (class 1259 OID 42129)
+-- Name: customer_order_view; Type: VIEW; Schema: store; Owner: postgres
+--
+
+CREATE VIEW store.customer_order_view AS
+ SELECT o.order_id,
+    o.user_id,
+    o.order_date,
+    o.order_totalprice,
+    (o.order_paymentdate)::date AS order_paymentdate,
+    o.order_number,
+    o.standard_shipping,
+    pt.payment_type_name,
+    rp.razorpay_payment_id,
+    pp.paypal_response,
+    ( SELECT json_agg(ll.*) AS orderitems
+           FROM ( SELECT l.orderdetail_id,
+                    l.prod_detail_id,
+                    p.prod_name,
+                    p.prod_id,
+                    l.orderdetail_qty,
+                    l.orderdetail_price,
+                    l.orderdetail_price_id,
+                    l.orderdetail_return,
+                    l.orderdetail_returnpayment,
+                    pi.prod_img_path,
+                    sh.shipment_id,
+                    sh.shipper_id,
+                    (sh.shipment_date)::date AS shipment_date,
+                    sh.shipment_trackingnumber,
+                    (sh.shipment_deliverydate)::date AS shipment_deliverydate
+                   FROM (((((store.orderdetails l
+                     JOIN public.product_details pd ON ((l.prod_detail_id = pd.pd_id)))
+                     JOIN public.product p ON ((p.prod_id = pd.prod_id)))
+                     JOIN public.product_sub_category ps ON ((p.prod_subcateg_id = ps.prod_subcateg_id)))
+                     JOIN public.product_image pi ON ((pi.prod_id = p.prod_id)))
+                     LEFT JOIN store.shipments sh ON ((sh.shipment_id = l.shipment_id)))
+                  WHERE ((l.order_id = o.order_id) AND (pi.prod_img_path = ( SELECT product_image.prod_img_path
+                           FROM public.product_image
+                          WHERE (product_image.prod_id = p.prod_id)
+                         LIMIT 1)))) ll) AS orderitems,
+    ( SELECT json_agg(ll.*) AS userdetails
+           FROM ( SELECT personalinfoselect.userid,
+                    personalinfoselect.fname,
+                    personalinfoselect.lname,
+                    personalinfoselect.mobno,
+                    personalinfoselect.dob,
+                    personalinfoselect.gender,
+                    personalinfoselect.emailid,
+                    personalinfoselect.discount,
+                    personalinfoselect.addrid,
+                    personalinfoselect.addrline1,
+                    personalinfoselect.addrline2,
+                    personalinfoselect.addrline3,
+                    personalinfoselect.city,
+                    personalinfoselect.state,
+                    personalinfoselect.pincode,
+                    personalinfoselect.country
+                   FROM public.personalinfoselect(o.user_id) personalinfoselect(userid, fname, lname, mobno, dob, gender, emailid, discount, addrid, addrline1, addrline2, addrline3, city, state, pincode, country)) ll) AS userdetails
+   FROM ((((store."order" o
+     JOIN store.payment py ON ((o.payment_id = py.payment_id)))
+     JOIN store.paymenttype pt ON ((pt.id = py.payment_type_id)))
+     LEFT JOIN store.razorpaypayment rp ON ((rp.raz_pay_id = py.payment_mode_id)))
+     LEFT JOIN store.paypalpayment pp ON ((pp.paypal_id = py.payment_mode_id)));
+
+
+ALTER TABLE store.customer_order_view OWNER TO postgres;
+
+--
+-- TOC entry 232 (class 1259 OID 33434)
+-- Name: order_order_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+ALTER TABLE store."order" ALTER COLUMN order_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME store.order_order_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 254 (class 1259 OID 42110)
+-- Name: order_view; Type: VIEW; Schema: store; Owner: postgres
+--
+
+CREATE VIEW store.order_view AS
+ SELECT o.order_id,
+    o.user_id,
+    concat(u.user_fname, ' ', u.user_lname) AS "Name",
+    o.order_date,
+    o.order_totalprice,
+    o.order_paymentdate,
+    o.order_number,
+    pt.payment_type_name,
+    ( SELECT json_agg(ll.*) AS orderitems
+           FROM ( SELECT l.orderdetail_id,
+                    l.prod_detail_id,
+                    p.prod_name,
+                    p.prod_id,
+                    ps.prod_category_id,
+                    l.orderdetail_qty,
+                    l.orderdetail_price,
+                    l.orderdetail_price_id,
+                    l.orderdetail_return,
+                    l.orderdetail_returnpayment,
+                    pi.prod_img_path,
+                    sh.shipper_id,
+                    (sh.shipment_date)::date AS shipment_date,
+                    sh.shipment_trackingnumber,
+                    (sh.shipment_deliverydate)::date AS shipment_deliverydate
+                   FROM (((((store.orderdetails l
+                     JOIN public.product_details pd ON ((l.prod_detail_id = pd.pd_id)))
+                     JOIN public.product p ON ((p.prod_id = pd.prod_id)))
+                     JOIN public.product_sub_category ps ON ((p.prod_subcateg_id = ps.prod_subcateg_id)))
+                     JOIN public.product_image pi ON ((pi.prod_id = p.prod_id)))
+                     LEFT JOIN store.shipments sh ON ((sh.shipment_id = l.shipment_id)))
+                  WHERE ((l.order_id = o.order_id) AND (pi.prod_img_path = ( SELECT product_image.prod_img_path
+                           FROM public.product_image
+                          WHERE (product_image.prod_id = p.prod_id)
+                         LIMIT 1)))) ll) AS orderitems
+   FROM (((store."order" o
+     JOIN public.users u ON ((o.user_id = u.user_id)))
+     JOIN store.payment py ON ((o.payment_id = py.payment_id)))
+     JOIN store.paymenttype pt ON ((pt.id = py.payment_type_id)))
+  ORDER BY o.order_paymentdate DESC;
+
+
+ALTER TABLE store.order_view OWNER TO postgres;
+
+--
+-- TOC entry 234 (class 1259 OID 33500)
+-- Name: orderdetails_orderdetail_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+ALTER TABLE store.orderdetails ALTER COLUMN orderdetail_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME store.orderdetails_orderdetail_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 230 (class 1259 OID 33426)
+-- Name: payment_payment_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+ALTER TABLE store.payment ALTER COLUMN payment_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME store.payment_payment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 240 (class 1259 OID 33632)
+-- Name: paymenttype_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+CREATE SEQUENCE store.paymenttype_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE store.paymenttype_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3126 (class 0 OID 0)
+-- Dependencies: 240
+-- Name: paymenttype_id_seq; Type: SEQUENCE OWNED BY; Schema: store; Owner: postgres
+--
+
+ALTER SEQUENCE store.paymenttype_id_seq OWNED BY store.paymenttype.id;
+
+
+--
+-- TOC entry 243 (class 1259 OID 33701)
+-- Name: paypalpayment_paypal_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+CREATE SEQUENCE store.paypalpayment_paypal_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE store.paypalpayment_paypal_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3127 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: paypalpayment_paypal_id_seq; Type: SEQUENCE OWNED BY; Schema: store; Owner: postgres
+--
+
+ALTER SEQUENCE store.paypalpayment_paypal_id_seq OWNED BY store.paypalpayment.paypal_id;
+
+
+--
+-- TOC entry 238 (class 1259 OID 33621)
+-- Name: razorpaypayment_raz_pay_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+CREATE SEQUENCE store.razorpaypayment_raz_pay_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE store.razorpaypayment_raz_pay_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3128 (class 0 OID 0)
+-- Dependencies: 238
+-- Name: razorpaypayment_raz_pay_id_seq; Type: SEQUENCE OWNED BY; Schema: store; Owner: postgres
+--
+
+ALTER SEQUENCE store.razorpaypayment_raz_pay_id_seq OWNED BY store.razorpaypayment.raz_pay_id;
+
+
+--
+-- TOC entry 251 (class 1259 OID 33840)
+-- Name: shipments_shipment_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+ALTER TABLE store.shipments ALTER COLUMN shipment_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME store.shipments_shipment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 250 (class 1259 OID 33832)
+-- Name: shippers; Type: TABLE; Schema: store; Owner: postgres
+--
+
+CREATE TABLE store.shippers (
+    shipper_id integer NOT NULL,
+    shipper_companyname character varying(50),
+    shipper_link character varying(100)
+);
+
+
+ALTER TABLE store.shippers OWNER TO postgres;
+
+--
+-- TOC entry 249 (class 1259 OID 33830)
+-- Name: shippers_shipper_id_seq; Type: SEQUENCE; Schema: store; Owner: postgres
+--
+
+ALTER TABLE store.shippers ALTER COLUMN shipper_id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME store.shippers_shipper_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 2911 (class 2604 OID 16626)
+-- Name: user_address addr_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_address ALTER COLUMN addr_id SET DEFAULT nextval('public.usr_address_addr_id_seq'::regclass);
+
+
+--
+-- TOC entry 2912 (class 2604 OID 16627)
+-- Name: user_address user_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_address ALTER COLUMN user_id SET DEFAULT nextval('public.usr_address_user_id_seq'::regclass);
+
+
+--
+-- TOC entry 2909 (class 2604 OID 16541)
+-- Name: users user_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.users_usr_id_seq'::regclass);
+
+
+--
+-- TOC entry 2923 (class 2604 OID 33719)
+-- Name: cod_otp otp_id; Type: DEFAULT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.cod_otp ALTER COLUMN otp_id SET DEFAULT nextval('store.cod_otp_otp_id_seq'::regclass);
+
+
+--
+-- TOC entry 2920 (class 2604 OID 33637)
+-- Name: paymenttype id; Type: DEFAULT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.paymenttype ALTER COLUMN id SET DEFAULT nextval('store.paymenttype_id_seq'::regclass);
+
+
+--
+-- TOC entry 2921 (class 2604 OID 33706)
+-- Name: paypalpayment paypal_id; Type: DEFAULT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.paypalpayment ALTER COLUMN paypal_id SET DEFAULT nextval('store.paypalpayment_paypal_id_seq'::regclass);
+
+
+--
+-- TOC entry 2919 (class 2604 OID 33626)
+-- Name: razorpaypayment raz_pay_id; Type: DEFAULT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.razorpaypayment ALTER COLUMN raz_pay_id SET DEFAULT nextval('store.razorpaypayment_raz_pay_id_seq'::regclass);
+
+
+--
+-- TOC entry 2943 (class 2606 OID 16859)
+-- Name: coupon coupon_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.coupon
+    ADD CONSTRAINT coupon_pkey PRIMARY KEY (coupon_id);
+
+
+--
+-- TOC entry 2939 (class 2606 OID 16774)
+-- Name: price_history price_history_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.price_history
+    ADD CONSTRAINT price_history_pkey PRIMARY KEY (price_id);
+
+
+--
+-- TOC entry 2935 (class 2606 OID 16688)
+-- Name: product_category product_category_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_category
+    ADD CONSTRAINT product_category_pkey PRIMARY KEY (prod_category_id);
+
+
+--
+-- TOC entry 2949 (class 2606 OID 33302)
+-- Name: product_details product_details_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_details
+    ADD CONSTRAINT product_details_pkey PRIMARY KEY (pd_id);
+
+
+--
+-- TOC entry 2947 (class 2606 OID 33287)
+-- Name: product product_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product
+    ADD CONSTRAINT product_pkey PRIMARY KEY (prod_id);
+
+
+--
+-- TOC entry 2937 (class 2606 OID 16698)
+-- Name: product_sub_category product_type_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_sub_category
+    ADD CONSTRAINT product_type_pkey PRIMARY KEY (prod_subcateg_id);
+
+
+--
+-- TOC entry 2931 (class 2606 OID 16618)
+-- Name: ref_address_type ref_address_type_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ref_address_type
+    ADD CONSTRAINT ref_address_type_pkey PRIMARY KEY (addr_type_code);
+
+
+--
+-- TOC entry 2945 (class 2606 OID 25213)
+-- Name: ref_colour ref_colour_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ref_colour
+    ADD CONSTRAINT ref_colour_pkey PRIMARY KEY (colour_id);
+
+
+--
+-- TOC entry 2941 (class 2606 OID 16814)
+-- Name: ref_size ref_size_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ref_size
+    ADD CONSTRAINT ref_size_pkey PRIMARY KEY (size_id);
+
+
+--
+-- TOC entry 2925 (class 2606 OID 16501)
+-- Name: ref_usr_type ref_usr_type_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ref_usr_type
+    ADD CONSTRAINT ref_usr_type_pkey PRIMARY KEY (usr_typecode);
+
+
+--
+-- TOC entry 2927 (class 2606 OID 16547)
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (user_id);
+
+
+--
+-- TOC entry 2933 (class 2606 OID 16631)
+-- Name: user_address usr_address_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_address
+    ADD CONSTRAINT usr_address_pkey PRIMARY KEY (addr_id);
+
+
+--
+-- TOC entry 2929 (class 2606 OID 16549)
+-- Name: users usr_email_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT usr_email_unique UNIQUE (user_emailaddr);
+
+
+--
+-- TOC entry 2966 (class 2606 OID 33721)
+-- Name: cod_otp cod_otp_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.cod_otp
+    ADD CONSTRAINT cod_otp_pkey PRIMARY KEY (otp_id);
+
+
+--
+-- TOC entry 2953 (class 2606 OID 33443)
+-- Name: order order_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store."order"
+    ADD CONSTRAINT order_pkey PRIMARY KEY (order_id);
+
+
+--
+-- TOC entry 2958 (class 2606 OID 33510)
+-- Name: orderdetails orderdetails_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.orderdetails
+    ADD CONSTRAINT orderdetails_pkey PRIMARY KEY (orderdetail_id);
+
+
+--
+-- TOC entry 2951 (class 2606 OID 33433)
+-- Name: payment payment_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.payment
+    ADD CONSTRAINT payment_pkey PRIMARY KEY (payment_id);
+
+
+--
+-- TOC entry 2962 (class 2606 OID 33639)
+-- Name: paymenttype paymenttype_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.paymenttype
+    ADD CONSTRAINT paymenttype_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 2964 (class 2606 OID 33712)
+-- Name: paypalpayment paypalpayment_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.paypalpayment
+    ADD CONSTRAINT paypalpayment_pkey PRIMARY KEY (paypal_id);
+
+
+--
+-- TOC entry 2960 (class 2606 OID 33631)
+-- Name: razorpaypayment razorpaypayment_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.razorpaypayment
+    ADD CONSTRAINT razorpaypayment_pkey PRIMARY KEY (raz_pay_id);
+
+
+--
+-- TOC entry 2970 (class 2606 OID 33846)
+-- Name: shipments shipments_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.shipments
+    ADD CONSTRAINT shipments_pkey PRIMARY KEY (shipment_id);
+
+
+--
+-- TOC entry 2968 (class 2606 OID 33836)
+-- Name: shippers shippers_pkey; Type: CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.shippers
+    ADD CONSTRAINT shippers_pkey PRIMARY KEY (shipper_id);
+
+
+--
+-- TOC entry 2955 (class 1259 OID 33548)
+-- Name: fki_orderdetails_prod_detail_id_fkey; Type: INDEX; Schema: store; Owner: postgres
+--
+
+CREATE INDEX fki_orderdetails_prod_detail_id_fkey ON store.orderdetails USING btree (prod_detail_id);
+
+
+--
+-- TOC entry 2954 (class 1259 OID 33459)
+-- Name: order_user_id_idx; Type: INDEX; Schema: store; Owner: postgres
+--
+
+CREATE INDEX order_user_id_idx ON store."order" USING btree (user_id);
+
+
+--
+-- TOC entry 2956 (class 1259 OID 33526)
+-- Name: orderdetails_order_id_idx; Type: INDEX; Schema: store; Owner: postgres
+--
+
+CREATE INDEX orderdetails_order_id_idx ON store.orderdetails USING btree (order_id);
+
+
+--
+-- TOC entry 2976 (class 2606 OID 33288)
+-- Name: product fk_prod_subcateg; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product
+    ADD CONSTRAINT fk_prod_subcateg FOREIGN KEY (prod_subcateg_id) REFERENCES public.product_sub_category(prod_subcateg_id);
+
+
+--
+-- TOC entry 2978 (class 2606 OID 33308)
+-- Name: product_details product_details_prod_colour_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_details
+    ADD CONSTRAINT product_details_prod_colour_fkey FOREIGN KEY (prod_colour) REFERENCES public.ref_colour(colour_id);
+
+
+--
+-- TOC entry 2977 (class 2606 OID 33303)
+-- Name: product_details product_details_prod_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_details
+    ADD CONSTRAINT product_details_prod_id_fkey FOREIGN KEY (prod_id) REFERENCES public.product(prod_id);
+
+
+--
+-- TOC entry 2979 (class 2606 OID 33313)
+-- Name: product_details product_details_prod_size_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_details
+    ADD CONSTRAINT product_details_prod_size_fkey FOREIGN KEY (prod_size) REFERENCES public.ref_size(size_id);
+
+
+--
+-- TOC entry 2974 (class 2606 OID 16699)
+-- Name: product_sub_category product_type_prod_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.product_sub_category
+    ADD CONSTRAINT product_type_prod_category_id_fkey FOREIGN KEY (prod_category_id) REFERENCES public.product_category(prod_category_id);
+
+
+--
+-- TOC entry 2975 (class 2606 OID 16815)
+-- Name: ref_size ref_size_prod_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ref_size
+    ADD CONSTRAINT ref_size_prod_category_id_fkey FOREIGN KEY (prod_category_id) REFERENCES public.product_category(prod_category_id);
+
+
+--
+-- TOC entry 2971 (class 2606 OID 16550)
+-- Name: users users_usr_typecode_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_usr_typecode_fkey FOREIGN KEY (user_typecode) REFERENCES public.ref_usr_type(usr_typecode);
+
+
+--
+-- TOC entry 2973 (class 2606 OID 16637)
+-- Name: user_address usr_address_addr_type_code_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_address
+    ADD CONSTRAINT usr_address_addr_type_code_fkey FOREIGN KEY (addr_type_code) REFERENCES public.ref_address_type(addr_type_code);
+
+
+--
+-- TOC entry 2972 (class 2606 OID 16632)
+-- Name: user_address usr_address_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_address
+    ADD CONSTRAINT usr_address_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id);
+
+
+--
+-- TOC entry 2987 (class 2606 OID 33722)
+-- Name: cod_otp cod_otp_fk; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.cod_otp
+    ADD CONSTRAINT cod_otp_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id);
+
+
+--
+-- TOC entry 2982 (class 2606 OID 33449)
+-- Name: order order_address_id_fkey; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store."order"
+    ADD CONSTRAINT order_address_id_fkey FOREIGN KEY (address_id) REFERENCES public.user_address(addr_id);
+
+
+--
+-- TOC entry 2984 (class 2606 OID 33730)
+-- Name: order order_coupon_id_fkey; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store."order"
+    ADD CONSTRAINT order_coupon_id_fkey FOREIGN KEY (coupon_id) REFERENCES public.coupon(coupon_id);
+
+
+--
+-- TOC entry 2983 (class 2606 OID 33454)
+-- Name: order order_payment_id_fkey; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store."order"
+    ADD CONSTRAINT order_payment_id_fkey FOREIGN KEY (payment_id) REFERENCES store.payment(payment_id);
+
+
+--
+-- TOC entry 2981 (class 2606 OID 33444)
+-- Name: order order_user_id_fkey; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store."order"
+    ADD CONSTRAINT order_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id);
+
+
+--
+-- TOC entry 2985 (class 2606 OID 33511)
+-- Name: orderdetails orderdetails_order_id_fkey; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.orderdetails
+    ADD CONSTRAINT orderdetails_order_id_fkey FOREIGN KEY (order_id) REFERENCES store."order"(order_id);
+
+
+--
+-- TOC entry 2986 (class 2606 OID 33543)
+-- Name: orderdetails orderdetails_prod_detail_id_fkey; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.orderdetails
+    ADD CONSTRAINT orderdetails_prod_detail_id_fkey FOREIGN KEY (prod_detail_id) REFERENCES public.product_details(pd_id);
+
+
+--
+-- TOC entry 2980 (class 2606 OID 33640)
+-- Name: payment payment_type_id_fk; Type: FK CONSTRAINT; Schema: store; Owner: postgres
+--
+
+ALTER TABLE ONLY store.payment
+    ADD CONSTRAINT payment_type_id_fk FOREIGN KEY (payment_type_id) REFERENCES store.paymenttype(id);
+
+
+-- Completed on 2020-12-01 16:19:42
+
+--
+-- PostgreSQL database dump complete
+--
+
