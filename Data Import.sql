@@ -193,4 +193,46 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,pro
 	inner join ref_colour rc on sd.colour= rc.colour_value
 	order by pr.prod_id	
 ----------------------Camisole end----------------------------------------
+------------------Heels for women---Begin---------------------------
+CREATE TABLE public.sampledata_heels(
+		productname varchar(100),
+		stylecode varchar(50),
+		sku	varchar(50),
+		description text,
+		mrp numeric,
+		usd numeric,
+		qty smallint,
+		size varchar(10),
+		colour varchar(20),
+		model varchar(100),
+		dateinsert timestamp
+	)
+	
+-----------------------
+COPY public.sampledata_heels(stylecode,description,sku,mrp,usd,qty,productname,colour,size,model) FROM 'F:\KP\SB\Data\Footwear\Heelsforwomen_csv.csv' DELIMITER ',' CSV HEADER;
+update sampledata_heels set dateinsert =now()
+--------------Insert Size---------
+INSERT INTO ref_size (size_value,size_code,prod_category_id)
+	with cte_s as 
+	(	
+		select 'UK '||size as shoe_size from sampledata_heels
+	)
+	select distinct(shoe_size),shoe_size,1 from cte_s --- 1 here is the Product Categ ID for footwear, add as per your value
+	order by shoe_size
+------------Insert Colour------------
+INSERT INTO ref_colour (colour_value,colour_code)  
+	select distinct(colour),substring(trim(colour),0,4) from sampledata_heels where colour not in 
+		(select colour_value from ref_colour)
+--------Insert products------------
+INSERT INTO product (prod_sku,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id)
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,3 from sampledata_heels
+	order by stylecode;
+
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty)
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_heels sd 
+	inner join product pr on sd.stylecode = pr.prod_sku
+	inner join ref_size rs on 'UK '||sd.size = rs.size_value
+	inner join ref_colour rc on sd.colour= rc.colour_value
+	order by pr.prod_id,rs.size_id
+------------------Heels for women---End---------------------------
 
