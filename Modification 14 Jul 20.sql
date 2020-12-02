@@ -139,6 +139,13 @@ add column prod_latest boolean default false;
 alter table store.orderdetails
 add column orderdetail_return VARCHAR(20),
  ADD COLUMN orderdetail_returnpayment VARCHAR(10);
+ 
+-----------03 Dec 20-------------
+----Product table modified------
+ALTER TABLE product
+RENAME prod_sku to prod_stylecode;
+ALTER TABLE product ADD CONSTRAINT product_UniqueStylecode UNIQUE (prod_stylecode);
+
 
 
 
