@@ -410,3 +410,29 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,pro
 	where sd.dateinsert = '2020-12-03 19:42:32.547083'
 	order by pr.prod_id,rs.size_id;
 ---------------------Heels 2--- end-----------
+--------------Bellies,wedges,flats_bellies_csv----Begin-----------
+COPY public.sampledata_bellies(stylecode,description,sku,mrp,usd,qty,colour,productname,size,model,model2,model3,model4,model5) 
+	FROM 'F:\KP\SB\Data\Footwear\Bellies,wedges,flats_bellies_csv.csv' DELIMITER ',' CSV HEADER;
+UPDATE sampledata_bellies set dateinsert = now() where dateinsert is null --- Use the latest date for items imported in this iteration
+-----------------------
+INSERT INTO ref_size (size_value,size_code, prod_category_id) --- 0 Rows
+	select distinct(size),size,1 from sampledata_bellies where dateinsert ='2020-12-03 20:12:50.831904' and size not in 
+	(select size_value from ref_size where prod_category_id=1)---- Use prod_category_id as per your db
+-------Insert Colour-----
+INSERT INTO ref_colour (colour_value,colour_code)  ---0 Row
+	select distinct(colour),substring(trim(colour),0,4) from sampledata_bellies where dateinsert ='2020-12-03 20:12:50.831904' and 
+	colour not in (select colour_value from ref_colour)
+-------Insert Products----
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id)
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,7 from sampledata_bellies
+	where dateinsert ='2020-12-03 20:12:50.831904'--- Add Prod Subcateg id as per ypur db
+	order by stylecode;
+	
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty) --24 Rows
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_bellies sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on sd.colour= rc.colour_value
+	where sd.dateinsert ='2020-12-03 20:12:50.831904'
+	order by pr.prod_id,rs.size_id
+--------------Bellies,wedges,flats_bellies_csv----End-----------
