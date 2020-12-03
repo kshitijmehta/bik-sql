@@ -374,3 +374,39 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,pro
 	inner join ref_colour rc on sd.colour= rc.colour_value
 	order by pr.prod_id,rs.size_id
 ---------------Wedges---end---------------
+--------------Heels 2--- Begin------------
+ALTER TABLE sampledata_heels
+ADD COLUMN model2 varchar(100),
+add column model3 varchar(100),
+ADD COLUMN model4 VARCHAR(100),
+ADD COLUMN model5 VARCHAR(100);
+--------------------------Data Import---------
+COPY public.sampledata_heels(stylecode,description,sku,mrp,usd,size,qty,colour,productname,model,model2,model3,model4,model5) 
+	FROM 'F:\KP\SB\Data\Footwear\heels_csv.csv' DELIMITER ',' CSV HEADER;
+UPDATE sampledata_heels set dateinsert = now() where dateinsert is null --- Use the latest date for items imported in this iteration
+--------------Insert size----------
+INSERT INTO ref_size (size_value,size_code,prod_category_id)--- 1 Row
+	with cte_s as 
+	(	
+		select 'UK '||size as shoe_size from sampledata_heels where dateinsert = '2020-12-03 19:42:32.547083'
+	)
+	select distinct(shoe_size),shoe_size,1 from cte_s --- 1 here is the Product Categ ID for footwear, add as per your value
+	where shoe_size not in (select size_value from ref_size where prod_category_id=1)
+	order by shoe_size
+------- Inserting Colours---------------
+INSERT INTO ref_colour (colour_value,colour_code)   --- 1 Row
+	select distinct(colour),substring(trim(colour),0,4) from sampledata_heels where dateinsert = '2020-12-03 19:42:32.547083' and
+	colour not in (select colour_value from ref_colour)
+-------Inserting Products---------------
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id) --15 Rows
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,3 from sampledata_heels --- Add Prod Subcateg id as per ypur db
+	where dateinsert = '2020-12-03 19:42:32.547083' order by stylecode;
+
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty)
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_heels sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on 'UK '||sd.size = rs.size_value
+	inner join ref_colour rc on sd.colour= rc.colour_value
+	where sd.dateinsert = '2020-12-03 19:42:32.547083'
+	order by pr.prod_id,rs.size_id;
+---------------------Heels 2--- end-----------
