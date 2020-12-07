@@ -146,6 +146,15 @@ ALTER TABLE product
 RENAME prod_sku to prod_stylecode;
 ALTER TABLE product ADD CONSTRAINT product_UniqueStylecode UNIQUE (prod_stylecode);
 
+-----07 Dec 20-----
+----- Open the store.order_view in create script mode---
+--- In seperate query do the following----
+drop view store.order_view
+ALTER TABLE product alter prod_name type VARCHAR(150)
+update product set prod_name = prod_desc where prod_subcateg_id=5;--177 rows
+update product set prod_name = prod_desc where prod_subcateg_id=6;--181 rows
+---Create store.order_view again----
+
 
 
 
