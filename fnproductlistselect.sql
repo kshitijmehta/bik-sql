@@ -46,9 +46,13 @@ AS $BODY$
 		 _where = CONCAT_WS(' AND '
 						  -- ,  CASE WHEN _colour IS NOT NULL THEN '('||_colour||')' END
 							, 'f.prod_img_path  = (select prod_img_path from product_image where prod_id= b.prod_id LIMIT 1)'
-				    		   , 'pd.pd_id = (select pd_id from product_details where prod_id = b.prod_id LIMIT 1)'
+				    		--   , 'pd.pd_id = (select pd_id from product_details where prod_id = b.prod_id LIMIT 1)'
 						   ,  CASE WHEN _colour IS NOT NULL THEN 'd.colour_id in ' ||_colour||' ' END
-						   ,  CASE WHEN _size IS NOT NULL THEN 'e.size_id in ' || _size||' ' END
+						   ,  CASE WHEN _size IS NOT NULL THEN 
+									'e.size_id in ' || _size||' ' 
+								ELSE
+									'pd.pd_id = (select pd_id from product_details where prod_id = b.prod_id LIMIT 1)'
+								END
 						   ,  CASE WHEN _prodcategid IS NOT NULL THEN 'c.prod_category_id ='|| _prodcategid  END
 							, CASE WHEN _subcategid IS NOT NULL THEN 'a.prod_subcateg_id in '||_subcategid||' ' END
 						   ,  CASE WHEN _price IS NOT NULL THEN _price END||' '
