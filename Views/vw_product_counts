@@ -1,4 +1,24 @@
 create view vw_product_counts
+(
+		prod_id
+	,	prod_colour
+	,	prod_subcateg_id
+	,	prod_subacateg_name
+	,	prod_size
+)
+AS
+select pr.prod_id, pd.prod_colour,pr.prod_subcateg_id,pc.prod_subcateg_name, string_agg(pd.prod_size::varchar,',' order by pd.prod_size)
+from public.product as pr
+inner join public.product_sub_category as pc on pr.prod_subcateg_id = pc.prod_subcateg_id
+inner join public.product_details as pd on pr.prod_id = pd.prod_id
+where pr.prod_datetill is null
+group by pr.prod_id, pd.prod_colour, pr.prod_subcateg_id,pc.prod_subcateg_name
+order by pr.prod_id;
+
+
+---------Commented on 07 Dec 20---------------------
+/*
+create view vw_product_counts
        ( 
 			 prod_subcategory_id
 		   , prod_subcategroy_name
@@ -22,3 +42,4 @@ create view vw_product_counts
     group by p.prod_subcateg_id, b.prod_subcateg_name
 	, a.prod_colour, rc.colour_value ,a.prod_size , rs.size_value;
 	
+*/
