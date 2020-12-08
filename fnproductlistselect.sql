@@ -16,7 +16,7 @@ CREATE OR REPLACE FUNCTION public.fnproductlistselect(
    , _prodname text default null)
    
     RETURNS TABLE(prodid integer, prodcategory character varying, prodsubcategory character varying, prodname character varying, proddesc text
-				  , inrprice numeric, usdprice numeric, colour character varying, size character varying, qty integer
+				  , inrprice numeric, usdprice numeric, colour character varying, size text, qty integer
 				  , prodimgpath TEXT) 
     LANGUAGE 'plpgsql'
 
@@ -29,7 +29,7 @@ AS $BODY$
 	DECLARE
 	
 	_sql TEXT := 'SELECT b.prod_id, c.prod_category,a.prod_subcateg_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
-		pd.prod_usd_price, d.colour_value, e.size_value,pd.prod_qty,f.prod_img_path FROM product_sub_category a
+		pd.prod_usd_price, d.colour_value,string_agg(e.size_value::varchar,'','' order by pd.prod_size) size,pd.prod_qty,f.prod_img_path FROM product_sub_category a
 		INNER JOIN product b ON a.prod_subcateg_id = b.prod_subcateg_id
 		INNER JOIN product_category c ON a.prod_category_id = c.prod_category_id
 		INNER JOIN product_details pd ON b.prod_id = pd.prod_id
@@ -59,12 +59,14 @@ AS $BODY$
 						   ,  CASE WHEN _prodname IS NOT NULL THEN 'lower(b.prod_name) like lower(''%'||_prodname||'%'') ' END||' ');
 		
 		 IF _where <> '' THEN
- 		 	_sql :=_sql ||' where '|| _where ||' order by b.prod_id';
+ 		 	_sql :=_sql ||' where '|| _where ||' group by b.prod_id,c.prod_category,a.prod_subcateg_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
+		pd.prod_usd_price, d.colour_value,pd.prod_qty order by b.prod_id';
 			--_sql :=_sql || _where ||' order by b.prod_id';
 		
 		 ELSE
 		  
-		 	_sql := _sql ||' order by b.prod_id';
+		 	_sql := _sql ||' group by b.prod_id,c.prod_category,a.prod_subcateg_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
+		pd.prod_usd_price, d.colour_value,pd.prod_qty order by b.prod_id';
 		
 		END IF;
 			 RETURN QUERY
