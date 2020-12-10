@@ -522,3 +522,54 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,pro
 	where sd.dateinsert ='2020-12-04 01:23:38.247821'
 	order by pr.prod_id,rs.size_id
 -----------------Bellies,heels,flats_bellies_csv---End------------
+---------------------Home essentials------Begin-----------------
+CREATE TABLE public.sampledata_homeessential(
+		stylecode varchar(250),	
+		description text,
+		sku	varchar(50),
+		mrp numeric,
+		usd numeric,
+		qty smallint,
+		colour varchar(20),
+		productname varchar(100),
+		size varchar(10),		
+		model varchar(100),
+		model2 varchar(100),
+		model3 varchar(100),
+		model4 varchar(100),
+		model5 varchar(100),
+		dateinsert timestamp
+	)
+	
+COPY public.sampledata_homeessential(stylecode,productname,description,mrp,usd,colour,model,model2,model3,qty) 
+	FROM 'F:\KP\SB\Data\Home Essential\home essentials_csv.csv' DELIMITER ',' CSV HEADER;
+	
+update sampledata_homeessential set dateinsert= now()
+update sampledata_homeessential set stylecode = 'Pen/brush/cutlery Holder Orange Round' where
+model='https://www.dropbox.com/s/a4ygsz74qxijaq9/Photo%2026-11-19%2C%206%2014%2052%20PM.jpg?dl=0';
+
+----------Inserting Colours-----------
+update sampledata_homeessential set colour = 'Orange' where trim(colour) = 'Orange.'
+update sampledata_homeessential set colour = 'Black' where trim(colour) = 'Black.'
+update sampledata_homeessential set colour = 'Silver' where trim(colour) = 'Silver.'
+
+INSERT INTO ref_colour (colour_value,colour_code)   --- 5 Rows
+	select distinct(trim(colour)),substring(trim(colour),0,4) from sampledata_homeessential where 
+	trim(colour) not in (select colour_value from ref_colour)
+	
+-------------Inserting Products--------------
+INSERT INTO product_category (prod_category) values ('Home Essential')
+select * from product_sub_category -- HD-8
+INSERT INTO product_sub_category(prod_category_id, prod_subcateg_name) values (3, 'Home Decor')
+
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id) --60 Rows
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,8 from sampledata_homeessential --- Add Prod Subcateg id as per ypur db
+	 order by stylecode;
+
+update sampledata_homeessential set qty = 5
+
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_colour,prod_qty)
+	select  pr.prod_id,sd.mrp, sd.usd, rc.colour_id, sd.qty from sampledata_homeessential sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_colour rc on trim(sd.colour)= rc.colour_value
+	order by pr.prod_id;
