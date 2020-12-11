@@ -573,3 +573,71 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_colour,p
 	inner join product pr on sd.stylecode = pr.prod_stylecode
 	inner join ref_colour rc on trim(sd.colour)= rc.colour_value
 	order by pr.prod_id;
+--------------Home Decor end----------------------------
+--------------Bellies-Final------Begin
+select * from sampledata_bellies
+select * from product_sub_category where prod_category_id=1----2,3,4,7
+delete from product_details
+where prod_id in (select  prod_id from product where prod_subcateg_id in (2,3,4,7))
+delete from product where prod_subcateg_id in (2,3,4,7)---129 rows
+
+COPY public.sampledata_bellies(stylecode,productname,description,sku,mrp,usd,size,qty,colour,model,model2,model3,model4,model5) --255 rows
+	FROM 'F:\KP\SB\Data\footwear\bellies_final_csv.csv' DELIMITER ',' CSV HEADER;
+
+update sampledata_bellies set dateinsert=now() where dateinsert is null
+
+select distinct(dateinsert) from sampledata_bellies--- "2020-12-10 23:40:02.934108"
+
+INSERT INTO ref_size (size_value,size_code, prod_category_id) --- 0 Rows
+	select distinct(trim(size),trim(size),1) from sampledata_bellies where dateinsert ='2020-12-10 23:40:02.934108' 
+					and trim(size) not in (select size_value from ref_size where prod_category_id=1)---- Use prod_category_id as per your db
+-------Insert Colour-----
+UPDATE sampledata_bellies set colour='Multicolour' where colour='Multi'
+INSERT INTO ref_colour (colour_value,colour_code)  ---1 Row
+	select distinct(trim(colour)),substring(trim(colour),0,4) from sampledata_bellies where dateinsert ='2020-12-10 23:40:02.934108' and 
+	colour not in (select colour_value from ref_colour)
+-------Insert Products----
+select * from product_sub_category
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id)  --39 Rows
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,7 from sampledata_bellies
+	where dateinsert ='2020-12-10 23:40:02.934108'--- Add Prod Subcateg id as per ypur db
+	order by stylecode;
+	
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty) --255 Rows
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_bellies sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on trim(sd.colour)= rc.colour_value
+	where sd.dateinsert ='2020-12-10 23:40:02.934108'
+	order by pr.prod_id,rs.size_id
+--------------Bellies-Final------End
+ALTER TABLE product_details ADD CONSTRAINT product_details_unique_record UNIQUE (prod_id,prod_inr_price,prod_usd_price,prod_colour,prod_size,prod_qty);
+------------Bellies,heels,flats-Heels----------Begin-----------------
+--------------------------Data Import---------
+select distinct(dateinsert) from sampledata_heels where dateinsert is null---"2020-12-11 18:13:50.183101"
+COPY public.sampledata_heels(stylecode,productname,description,sku,mrp,usd,size,qty,colour,model,model2,model3,model4,model5) 
+	FROM 'F:\KP\SB\Data\Footwear\Bellies,heels,flats-Final-Heels_csv.csv' DELIMITER ',' CSV HEADER; --84 rows
+	
+UPDATE sampledata_heels set dateinsert = now() where dateinsert is null --- Use the latest date for items imported in this iteration
+--------------Insert size----------
+INSERT INTO ref_size (size_value,size_code, prod_category_id) --- 0 Rows
+	select distinct(trim(size),trim(size),1) from sampledata_heels where dateinsert ='2020-12-11 18:13:50.183101' 
+					and trim(size) not in (select size_value from ref_size where prod_category_id=1)---- Use prod_category_id as per your db
+------- Inserting Colours---------------
+INSERT INTO ref_colour (colour_value,colour_code)   --- 0 Row
+	select distinct(trim(colour)),substring(trim(colour),0,4) from sampledata_heels where dateinsert = '2020-12-11 18:13:50.183101' and
+	trim(colour) not in (select colour_value from ref_colour)
+-------Inserting Products---------------
+select * from product_sub_category  --- heels=3
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id) --15 Rows
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,3 from sampledata_heels --- Add Prod Subcateg id as per ypur db
+	where dateinsert = '2020-12-11 18:13:50.183101' order by stylecode;
+
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty)
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_heels sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on trim(sd.colour)= rc.colour_value
+	where sd.dateinsert = '2020-12-11 18:13:50.183101'
+	order by pr.prod_id,rs.size_id;
+------------Bellies,heels,flats-Heels----------End-----------------
