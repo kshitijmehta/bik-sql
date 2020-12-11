@@ -676,3 +676,36 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,pro
 	where sd.dateinsert ='2020-12-11 18:37:22.958961'
 	order by pr.prod_id,rs.size_id
 ------------Bellies,heels,flats-Final-Flats-------End
+---------------------Heels_final_csv-------Begin
+--------------------------Data Import---------
+select distinct(dateinsert) from sampledata_heels where dateinsert is null---""2020-12-12 00:14:29.248489""
+COPY public.sampledata_heels(stylecode,productname,description,sku,mrp,usd,size,qty,colour,model,model2,model3,model4,model5) 
+	FROM 'F:\KP\SB\Data\Footwear\Heels_final_csv.csv' DELIMITER ',' CSV HEADER; --104 rows
+	
+UPDATE sampledata_heels set dateinsert = now() where dateinsert is null --- Use the latest date for items imported in this iteration
+--------------Insert size----------
+INSERT INTO ref_size (size_value,size_code, prod_category_id) --- 0 Rows
+	select distinct(trim(size),trim(size),1) from sampledata_heels where dateinsert ='2020-12-12 00:14:29.248489' 
+					and trim(size) not in (select size_value from ref_size where prod_category_id=1)---- Use prod_category_id as per your db
+------- Inserting Colours---------------
+INSERT INTO ref_colour (colour_value,colour_code)   --- 0 Row
+	select distinct(trim(colour)),substring(trim(colour),0,4) from sampledata_heels where dateinsert = '2020-12-12 00:14:29.248489' and
+	trim(colour) not in (select colour_value from ref_colour)
+-------Inserting Products---------------
+select * from product_sub_category  --- heels=3
+
+update sampledata_heels set stylecode='1817_MULTI_2' where 
+stylecode='1817_MULTI' and dateinsert='2020-12-12 00:14:29.248489'
+
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id) --03ows
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,3 from sampledata_heels --- Add Prod Subcateg id as per ypur db
+	where dateinsert = '2020-12-12 00:14:29.248489' order by stylecode;
+
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty)---18 rows
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_heels sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on trim(sd.colour)= rc.colour_value
+	where sd.dateinsert = '2020-12-12 00:14:29.248489'
+	order by pr.prod_id,rs.size_id;
+------------------------------------Heels_final_csv-------End------
