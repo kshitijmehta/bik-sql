@@ -709,3 +709,63 @@ INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,pro
 	where sd.dateinsert = '2020-12-12 00:14:29.248489'
 	order by pr.prod_id,rs.size_id;
 ------------------------------------Heels_final_csv-------End------
+--------------Bellies and wedges_bellies_csv------Begin
+COPY public.sampledata_bellies(stylecode,productname,description,sku,mrp,usd,size,qty,colour,model,model2,model3,model4,model5) --30 rows
+	FROM 'F:\KP\SB\Data\footwear\Bellies and Wedges-Bellies_csv.csv' DELIMITER ',' CSV HEADER;
+
+update sampledata_bellies set dateinsert=now() where dateinsert is null
+
+select distinct(dateinsert) from sampledata_bellies--- "2020-12-13 01:41:14.344349"
+
+INSERT INTO ref_size (size_value,size_code, prod_category_id) --- 0 Rows
+	select distinct(trim(size),trim(size),1) from sampledata_bellies where dateinsert ='2020-12-13 01:41:14.344349' 
+					and trim(size) not in (select size_value from ref_size where prod_category_id=1)---- Use prod_category_id as per your db
+-------Insert Colour-----
+
+INSERT INTO ref_colour (colour_value,colour_code)  ---0 Row
+	select distinct(trim(colour)),substring(trim(colour),0,4) from sampledata_bellies where dateinsert ='2020-12-13 01:41:14.344349' and 
+	colour not in (select colour_value from ref_colour)
+-------Insert Products----
+select * from product_sub_category
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id)  --
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,7 from sampledata_bellies
+	where dateinsert ='2020-12-13 01:41:14.344349'--- Add Prod Subcateg id as per ypur db
+	order by stylecode;
+	
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty) --30 Rows
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_bellies sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on trim(sd.colour)= rc.colour_value
+	where sd.dateinsert ='2020-12-13 01:41:14.344349'
+	order by pr.prod_id,rs.size_id
+--------------Bellies and Wedges - Bellies_csv-------end
+-------------Bellies and Wedges - wedges_csv----Begin-----------
+select * from sampledata_wedges where dateinsert is null
+COPY public.sampledata_wedges(stylecode,productname,description,sku,mrp,usd,size,qty,colour,model,model2,model3,model4,model5) 
+	FROM 'F:\KP\SB\Data\Footwear\Bellies and Wedges-Wedges_csv.csv' DELIMITER ',' CSV HEADER; --78 Rows
+UPDATE sampledata_wedges set dateinsert = now() where dateinsert is null --- Use the latest date for items imported in this iteration
+-----------------------
+select distinct(dateinsert) from sampledata_wedges --"2020-12-13 01:48:59.264865"
+INSERT INTO ref_size (size_value,size_code, prod_category_id) --- 0 Rows
+	select distinct(size),size,1 from sampledata_wedges where dateinsert ='2020-12-13 01:48:59.264865' and size not in 
+	(select size_value from ref_size where prod_category_id=1)---- Use prod_category_id as per your db
+-------Insert Colour-----
+INSERT INTO ref_colour (colour_value,colour_code)  ---0 Row
+	select distinct(colour),substring(trim(colour),0,4) from sampledata_wedges where dateinsert ='2020-12-13 01:48:59.264865' and 
+	colour not in (select colour_value from ref_colour)
+-------Insert Products----
+select * from product_sub_category---wedges=4
+INSERT INTO product (prod_stylecode,prod_name,prod_desc,prod_datetimeinserted,prod_subcateg_id) --13 Rows
+	select distinct on (stylecode) stylecode, productname, description,now()::timestamp,4 from sampledata_wedges
+	where dateinsert ='2020-12-13 01:48:59.264865'--- Add Prod Subcateg id as per ypur db
+	order by stylecode;
+	
+INSERT INTO product_details (prod_id,prod_inr_price,prod_usd_price,prod_size,prod_colour,prod_qty) --78 Rows
+	select  pr.prod_id,sd.mrp, sd.usd, rs.size_id, rc.colour_id, sd.qty from sampledata_wedges sd 
+	inner join product pr on sd.stylecode = pr.prod_stylecode
+	inner join ref_size rs on sd.size = rs.size_value
+	inner join ref_colour rc on sd.colour= rc.colour_value
+	where sd.dateinsert ='2020-12-13 01:48:59.264865'
+	order by pr.prod_id,rs.size_id
+-------------Bellies and Wedges - wedges_csv---End-----------	
