@@ -11,9 +11,12 @@ select pr.prod_id, pd.prod_colour,pr.prod_subcateg_id,pc.prod_subcateg_name, str
 from public.product as pr
 inner join public.product_sub_category as pc on pr.prod_subcateg_id = pc.prod_subcateg_id
 inner join public.product_details as pd on pr.prod_id = pd.prod_id
+inner join public.product_image pi on pr.prod_id=pi.prod_id
 where pr.prod_datetill is null
+and pi.prod_img_name = (select prod_img_name from product_image where prod_id=pr.prod_id limit 1)
 group by pr.prod_id, pd.prod_colour, pr.prod_subcateg_id,pc.prod_subcateg_name
 order by pr.prod_id;
+
 
 
 ---------Commented on 07 Dec 20---------------------
