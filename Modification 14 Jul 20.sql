@@ -156,6 +156,11 @@ update product set prod_name = prod_desc where prod_subcateg_id=6;--181 rows
 ---Create store.order_view again----
 
 
+-----20 Dec 20-----
+-----Updating USD value of lingerie-----------
+update product_details  set prod_usd_price = trunc(((prod_inr_price * 2.5)/ 70),2) where
+prod_id in (select prod_id from product where prod_subcateg_id in (5,6));
+
 
 
 
