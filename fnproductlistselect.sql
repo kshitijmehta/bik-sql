@@ -60,13 +60,13 @@ AS $BODY$
 		
 		 IF _where <> '' THEN
  		 	_sql :=_sql ||' where '|| _where ||' group by b.prod_id,c.prod_category,a.prod_subcateg_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
-		pd.prod_usd_price, d.colour_value,pd.prod_qty,f.prod_img_path order by b.prod_id';
+		pd.prod_usd_price, d.colour_value,pd.prod_qty,f.prod_img_path order by random()';
 			--_sql :=_sql || _where ||' order by b.prod_id';
 		
 		 ELSE
 		  
 		 	_sql := _sql ||' group by b.prod_id,c.prod_category,a.prod_subcateg_name, b.prod_name,b.prod_desc, pd.prod_inr_price,
-		pd.prod_usd_price, d.colour_value,pd.prod_qty,f.prod_img_path order by b.prod_id';
+		pd.prod_usd_price, d.colour_value,pd.prod_qty,f.prod_img_path order by random()';
 		
 		END IF;
 			 RETURN QUERY
